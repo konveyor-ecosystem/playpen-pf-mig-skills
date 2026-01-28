@@ -140,3 +140,24 @@ Started: Wed Jan 28 04:20:17 PM EST 2026
   - The `--pf-t--temp--dev--tbd` placeholder tokens in Dashboard.tsx will be addressed in US-016 (CSS variables)
   - Pre-existing lint errors in TodoList.tsx and TodoModal.tsx are unrelated to US-007 scope
 ---
+
+## 2026-01-28 20:30 - US-008
+- **What was implemented**: Updated Dashboard.tsx DataList components for PF6 compatibility
+- **Files changed**:
+  - `todo-app/src/components/dashboard/Dashboard.tsx` - Added explicit `id` prop to DataListItem
+  - Updated `prd.json` to mark US-008 as passing
+- **Verification performed**:
+  - DataListItem now has required `id` prop for PF6
+  - DataList has `aria-label` (already present)
+  - DataListItemRow, DataListItemCells, DataListCell have no breaking API changes
+  - Checkbox onChange callback compatible with PF6 (callback doesn't need to destructure params)
+  - Label color prop works correctly with getPriorityColor() function
+  - TypeScript build passes
+  - Lint passes for Dashboard.tsx (pre-existing errors in other files remain)
+  - E2E tests blocked by host Playwright dependencies
+- **Learnings for future iterations:**
+  - DataListItem requires explicit `id` prop in PF6 (in addition to React `key` prop)
+  - Checkbox onChange signature is `(event, checked) => void` but you don't need to use the params if not needed
+  - DataList, DataListItemRow, DataListItemCells, DataListCell have no breaking API changes in PF6
+  - Label color options remain compatible between PF5 and PF6
+---
