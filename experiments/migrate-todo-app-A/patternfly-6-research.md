@@ -321,14 +321,25 @@ Based on the PRD, these files need updates:
 
 ## Dependency Analysis
 
-### Current PatternFly Package Versions (PF5)
+### PatternFly Package Versions
 
-| Package | Current Version |
-|---------|-----------------|
+#### Before Migration (PF5)
+| Package | Version |
+|---------|---------|
 | @patternfly/patternfly | 5.0.2 |
 | @patternfly/react-core | 5.2.1 |
 | @patternfly/react-icons | 5.2.1 |
 | @patternfly/react-table | 5.2.1 |
+
+#### After Migration (PF6) - US-003 Completed
+| Package | Version |
+|---------|---------|
+| @patternfly/patternfly | 6.4.0 |
+| @patternfly/react-core | 6.4.1 |
+| @patternfly/react-icons | 6.4.0 |
+| @patternfly/react-table | 6.4.1 |
+
+**Peer Dependency Warnings**: None. All dependencies resolved cleanly.
 
 ### React Compatibility
 
