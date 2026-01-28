@@ -209,8 +209,8 @@
         "Typecheck passes"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": "File: src/components/todos/TodoList.tsx"
+      "passes": true,
+      "notes": "Completed: Added required titleText prop to EmptyState for PF6. PageSection, Checkbox, Label, Button, Content, Flex, FlexItem verified PF6 compatible. Pre-existing lint errors in file (react-hooks, no-explicit-any) unrelated to US-012 scope."
     },
     {
       "id": "US-013",

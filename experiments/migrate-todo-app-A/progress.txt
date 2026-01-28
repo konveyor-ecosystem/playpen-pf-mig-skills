@@ -226,3 +226,25 @@ Started: Wed Jan 28 04:20:17 PM EST 2026
   - Switch onChange signature `(event, checked) => void` was already correct
   - Codemod warning about "appendTo default changed to document.body" is informational only (no code change needed)
 ---
+
+## 2026-01-28 22:30 - US-012
+- **What was implemented**: Updated TodoList.tsx remaining components for PF6 compatibility
+- **Files changed**:
+  - `todo-app/src/components/todos/TodoList.tsx` - Added required `titleText` prop to EmptyState
+  - Updated `prd.json` to mark US-012 as passing
+- **Verification performed**:
+  - EmptyState now has required `titleText="No todos found"` prop (PF6 requirement)
+  - EmptyStateBody contains supplementary text "Create your first todo to get started."
+  - PageSection already updated by codemods (hasBodyWrapper={false})
+  - Checkbox onChange compatible with PF6 (callback doesn't need to destructure params)
+  - Label color prop works with getPriorityColor() function (returns valid PF6 colors)
+  - Button, Content/ContentVariants, Flex/FlexItem already updated by codemods or unchanged in PF6
+  - TypeScript build passes
+  - Pre-existing lint errors in TodoList.tsx (react-hooks/immutability, no-explicit-any) unrelated to US-012 scope
+  - E2E tests blocked by host Playwright dependencies
+- **Learnings for future iterations:**
+  - EmptyState in PF6 requires `titleText` prop - cannot just have text in EmptyStateBody
+  - When converting to PF6 EmptyState, split the message: title goes to `titleText` prop, details go to EmptyStateBody
+  - Checkbox onChange signature `(event, checked) => void` works fine even if you don't use the parameters
+  - Pre-existing lint errors should be tracked separately and addressed in dedicated cleanup story (US-018)
+---
