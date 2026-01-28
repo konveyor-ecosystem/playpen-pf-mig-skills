@@ -298,3 +298,29 @@ Started: Wed Jan 28 04:20:17 PM EST 2026
   - Other border width tokens: `--pf-t--global--border--width--strong` (2px), `--pf-t--global--border--width--extra-strong` (3px)
   - Deprecated Modal import is no longer needed after migrating to new Modal structure
 ---
+
+## 2026-01-28 24:00 - US-015
+- **What was implemented**: Updated DeleteConfirmationModal.tsx for PF6
+- **Files changed**:
+  - `todo-app/src/components/todos/DeleteConfirmationModal.tsx` - Migrated Modal to new PF6 structure
+  - Updated `prd.json` to mark US-015 as passing
+- **Verification performed**:
+  - Migrated Modal from `@patternfly/react-core/deprecated` to new PF6 Modal from `@patternfly/react-core`
+  - Added ModalHeader with `title` prop (replaces custom header div with nested Content)
+  - Added ModalBody (replaces custom body div)
+  - Added ModalFooter (replaces custom footer div)
+  - Added `variant="small"` for appropriate modal sizing
+  - Removed SCSS import - PF6 Modal provides built-in styling for header, body, footer
+  - Removed unused ContentVariants import
+  - Button variant='danger' works correctly in PF6
+  - Content components already updated by codemods
+  - TypeScript build passes
+  - Lint passes for DeleteConfirmationModal.tsx
+  - Pre-existing lint errors in other files unrelated to US-015 scope
+  - E2E tests blocked by host Playwright dependencies
+- **Learnings for future iterations:**
+  - DeleteConfirmationModal is simpler modal case - ModalHeader with `title` prop is sufficient
+  - Custom CSS classes for modal header/body/footer can be removed when migrating to PF6 (built-in styling)
+  - Button variant='danger' unchanged between PF5 and PF6
+  - The `data-test-id` attribute can be passed directly to ModalHeader component
+---
