@@ -10,6 +10,8 @@ Started: Wed Jan 28 04:20:17 PM EST 2026
 - PatternFly 6 codemods: `npx @patternfly/pf-codemods ./src --v6 --fix`
 - PF6 CSS token naming: `--pf-v5-global--*` → `--pf-t--global--*` (new semantic token format)
 - Use https://www.patternfly.org/tokens/all-patternfly-tokens for mapping old CSS vars to new semantic tokens
+- PF6 CSS class prefix: `pf-v5-c-*` → `pf-v6-c-*`, `pf-v5-u-*` → `pf-v6-u-*`
+- PF6 breakpoints are rem values, not CSS variables: md=48rem, lg=62rem, xl=75rem
 
 ---
 
@@ -323,4 +325,36 @@ Started: Wed Jan 28 04:20:17 PM EST 2026
   - Custom CSS classes for modal header/body/footer can be removed when migrating to PF6 (built-in styling)
   - Button variant='danger' unchanged between PF5 and PF6
   - The `data-test-id` attribute can be passed directly to ModalHeader component
+---
+
+## 2026-01-29 00:30 - US-016
+- **What was implemented**: Updated all CSS variable references from PF5 to PF6 format
+- **Files changed**:
+  - `todo-app/src/App.scss` - Updated CSS variables and class prefix
+  - `todo-app/src/components/layout/AppNav.scss` - Updated CSS variables
+  - `todo-app/src/components/dashboard/Dashboard.scss` - Updated CSS variables
+  - `todo-app/src/components/dashboard/Dashboard.tsx` - Replaced temp dev tokens with proper PF6 tokens
+  - `todo-app/src/components/todos/TodoList.scss` - Updated CSS variables and class prefix
+  - `todo-app/src/components/todos/TodoModal.scss` - Updated CSS variables and class prefix
+  - `todo-app/src/components/todos/DeleteConfirmationModal.scss` - Updated CSS variables
+  - `todo-app/src/utils/colorUtils.ts` - Replaced all temp dev placeholders with proper PF6 color tokens
+  - Updated `prd.json` to mark US-016 as passing
+- **Verification performed**:
+  - All --pf-v5-* CSS variables replaced with --pf-t--* format
+  - All --pf-t--temp--dev--tbd placeholders replaced with proper tokens
+  - CSS class references updated from pf-v5-c-* to pf-v6-c-*
+  - Breakpoint CSS variable replaced with rem value (48rem for md breakpoint)
+  - TypeScript build passes
+  - No new lint errors introduced (pre-existing errors in other files remain)
+- **Learnings for future iterations:**
+  - PF6 token naming follows semantic pattern: --pf-t--global--[category]--[property]--[variant]--[state]
+  - Background colors: --pf-t--global--background--color--primary--default (light), --secondary--default (light-100), --inverse (dark)
+  - Border tokens: --pf-t--global--border--width--regular (1px), --color--default
+  - Status colors: --pf-t--global--color--status--[danger|warning|info|success]--default
+  - Nonstatus colors: --pf-t--global--color--nonstatus--purple--default (for purple)
+  - Text colors: --pf-t--global--text--color--regular, --subtle (gray), --on-dark (light text on dark bg)
+  - Font tokens: --pf-t--global--font--size--[sm|md|lg|xl|2xl|3xl|4xl], --weight--body--bold
+  - Brand/active color: --pf-t--global--color--brand--default
+  - Breakpoints are no longer CSS variables in PF6 - use rem values directly (48rem for md, 62rem for lg)
+  - Spacer tokens keep same format: --pf-t--global--spacer--[sm|md|lg]
 ---

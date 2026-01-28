@@ -282,8 +282,8 @@
         "Typecheck passes"
       ],
       "priority": 16,
-      "passes": false,
-      "notes": "Files: src/App.scss, src/components/**/*.scss, all TSX files"
+      "passes": true,
+      "notes": "Completed: Updated all CSS variable references from --pf-v5-* to --pf-t--* format across 6 SCSS files, Dashboard.tsx, and colorUtils.ts. Token mappings: BackgroundColor→background--color, spacer unchanged, BorderWidth→border--width--regular, BorderColor→border--color--default, danger-color→color--status--danger--default, success-color→color--status--success--default, FontSize→font--size, FontWeight→font--weight--body--bold, active-color→color--brand--default. Also updated CSS class prefix from pf-v5-c-* to pf-v6-c-*. Breakpoint CSS var replaced with rem value (48rem). Build passes. Pre-existing lint errors in TodoList.tsx and TodoModal.tsx unrelated to US-016 scope."
     },
     {
       "id": "US-017",
