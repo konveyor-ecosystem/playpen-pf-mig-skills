@@ -317,8 +317,8 @@
         "Typecheck passes"
       ],
       "priority": 18,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Fixed lint errors in TodoList.tsx (refactored to useMemo, proper types for sort values and handleSort event), TodoModal.tsx (fixed function hoisting, proper type for handleFieldChange), and e2e test files (unused variables). Build and lint pass."
     },
     {
       "id": "US-019",

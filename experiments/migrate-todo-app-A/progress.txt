@@ -378,3 +378,25 @@ Started: Wed Jan 28 04:20:17 PM EST 2026
   - Sizes: xs, sm, md, lg, xl, 2xl, 3xl, 4xl
   - The codemods don't automatically update CSS class references in JSX className strings
 ---
+
+## 2026-01-29 01:30 - US-018
+- **What was implemented**: Fixed remaining TypeScript and lint errors
+- **Files changed**:
+  - `todo-app/src/components/todos/TodoList.tsx` - Refactored to use useMemo, fixed any types, proper event type
+  - `todo-app/src/components/todos/TodoModal.tsx` - Fixed function hoisting, proper type for handleFieldChange
+  - `todo-app/e2e/page-objects/TodoListPage.ts` - Removed unused catch variable
+  - `todo-app/e2e/tests/dashboard/statistics.spec.ts` - Removed unused import
+  - Updated `prd.json` to mark US-018 as passing
+- **Verification performed**:
+  - No TypeScript errors - build passes
+  - No lint errors - lint passes (0 errors, 0 warnings)
+  - All quality checks pass
+- **Learnings for future iterations:**
+  - `react-hooks/set-state-in-effect` lint rule warns against calling setState in useEffect synchronously
+  - For derived state (filtering/sorting), use `useMemo` instead of `useEffect` + `useState` pattern
+  - For prop-to-state sync (e.g., populating form from prop), use eslint-disable with explanation if unavoidable
+  - Avoid using `any` type - use specific types or union types (e.g., `string` for sort values)
+  - Use `React.MouseEvent` instead of `any` for event handler parameters
+  - When fixing function hoisting issues, move the function declaration above its first use
+  - Empty catch blocks should use `catch { }` without variable instead of `catch (e) { }` to avoid unused variable warnings
+---
