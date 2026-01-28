@@ -1,0 +1,27 @@
+# Ralph Progress Log
+Started: Wed Jan 28 04:20:17 PM EST 2026
+---
+
+## Codebase Patterns
+- Git repo is at `/home/jmatthews.linux/Shared/patternfly_experiments/playpen-pf-mig-skills`, not in the experiment directory
+- The todo-app source is accessed via symlink: `todo-app -> mig-demo-apps/kai/nodejs/todo-app`
+- Run npm commands from the todo-app directory: `npm run build --prefix .../todo-app`
+- The mig-demo-apps directory contains a separate git repo - be careful not to confuse the two repos
+- PatternFly 6 codemods: `npx @patternfly/pf-codemods ./src --v6 --fix`
+
+---
+
+## 2026-01-28 16:26 - US-001
+- **What was implemented**: Research and documentation of PatternFly 6 upgrade requirements
+- **Files changed**:
+  - Created `experiments/migrate-todo-app-A/patternfly-6-research.md`
+  - Updated `prd.json` to mark US-001 as passing
+- **Learnings for future iterations:**
+  - Key breaking changes: Masthead restructuring (MastheadBrand->MastheadLogo, MastheadMain->MastheadBrand)
+  - EmptyState now requires `titleText` prop and `icon` prop directly (no more EmptyStateHeader/EmptyStateIcon children)
+  - Deprecated: Chip (use Label), Tile (use Card with selectableActions), Text/TextContent (use Content)
+  - CSS variables: `--pf-v5-*` changed to `--pf-t--*` format
+  - CSS classes: `pf-v5-*` changed to `pf-v6-*` format
+  - Run codemods BEFORE making manual changes
+  - Typecheck passes on current PF5 codebase (pre-existing lint errors exist but are not blockers)
+---
