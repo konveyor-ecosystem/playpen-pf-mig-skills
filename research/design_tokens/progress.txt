@@ -114,3 +114,75 @@ Started: Wed Jan 28 02:30:10 PM EST 2026
   - pf-codemods token list files in `shared-codemod-helpers/src/tokenLists/` are authoritative source
   - Negative lookbehind in regex `(?<!:)` is critical to avoid matching codemod comment annotations
 ---
+
+## 2026-01-28 - US-005
+- **What was implemented**: Migration workflow analysis with intervention points for tooling
+- **Files changed**:
+  - Created `research/05_migration_workflow_analysis.md`
+  - Updated `prd.json` to mark US-005 as complete
+- **Content covered**:
+  - Complete 4-stage migration workflow map:
+    1. Discovery (find v5 tokens, ~20% effort)
+    2. Analysis (understand context, ~15% effort)
+    3. Resolution (select replacements, ~40% effort)
+    4. Validation (verify correctness, ~10% effort)
+  - Official PatternFly migration sequence from documentation
+  - Scenario categorization by frequency:
+    - Very High: Color tokens, class names, imports
+    - High: Component tokens, custom overrides
+    - Medium: Deprecated components, breakpoints
+    - Low: Removed tokens, major refactoring
+  - Scenario categorization by difficulty:
+    - Quick Wins (<1 min): 60-70% of changes
+    - Moderate (1-5 min): 20-25% of changes
+    - Complex (5-30 min): 8-12% of changes
+    - Major Refactoring (30+ min): 2-5% of changes
+  - 8 specific pain points identified with:
+    - Where developers get stuck
+    - What information is missing
+  - 6 tooling intervention points with complexity/impact matrix
+  - Optimized developer workflow recommendation
+  - Decision framework for token selection (property → intent → state)
+- **Learnings for future iterations:**
+  - Resolution stage takes 40% of effort - highest value intervention point
+  - Custom overrides are "invisible" to codemods - detection is a gap
+  - Context-aware suggestions need property + semantic intent + state
+  - ~2,680 component tokens are a "dead end" with no v6 mappings - requires researching v6 API
+  - Breakpoint conversion is a quick win: px → rem (divide by 16)
+  - Hot pink placeholders preserve original token in comments for reference
+  - PatternFly recommends disabling all custom CSS overrides first, then adding back essential ones
+  - Visual regression detection is a validation pain point - value changes (e.g., FontSize_2xl) may be intentional
+---
+
+## 2026-01-28 - US-006
+- **What was implemented**: Synthesis and recommendations consolidating all research phases
+- **Files changed**:
+  - Created `research/00_executive_summary.md`
+  - Created `research/06_synthesis_and_recommendations.md`
+  - Updated `prd.json` to mark US-006 as complete
+- **Content covered**:
+  - Consolidated gap analysis with coverage percentages (70% automated, 20% semi-automatable, 10% manual)
+  - Multi-factor priority matrix scoring gaps by frequency (40%), difficulty (35%), automation potential (25%)
+  - Priority ranking:
+    1. Color token selection (score: 7.70)
+    2. Context-dependent decisions (score: 7.35)
+    3. Custom CSS override detection (score: 7.10)
+    4. Component-specific tokens (score: 6.80)
+  - Tool requirements defined:
+    - Must-have: Comprehensive detection, context-aware suggestions, progress tracking
+    - Nice-to-have: Interactive replacement, visual comparison, component guidance, batch mode
+    - Out-of-scope: React refactoring, structural migration, visual regression testing
+  - Implementation recommendations:
+    - 3-phase development (Detection → Suggestion → Interactive)
+    - Technology stack (TypeScript, PostCSS, Commander.js)
+    - Architecture diagram for detection/suggestion pipelines
+  - 8 key findings with strategic recommendations
+  - Executive summary for rapid team onboarding
+- **Learnings for future iterations:**
+  - Semi-automatable tier (color tokens, context detection, override discovery) offers best ROI
+  - Complement pf-codemods rather than compete; use its data as source of truth
+  - Detection is valuable even without suggestions - provides visibility
+  - Resolution stage takes 40% of effort - highest value intervention point
+  - Target >80% accuracy for top suggestion to be useful
+  - Phased development reduces risk; detection MVP provides immediate value
+---
