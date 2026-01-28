@@ -25,3 +25,18 @@ Started: Wed Jan 28 04:20:17 PM EST 2026
   - Run codemods BEFORE making manual changes
   - Typecheck passes on current PF5 codebase (pre-existing lint errors exist but are not blockers)
 ---
+
+## 2026-01-28 17:02 - US-002
+- **What was implemented**: Dependency analysis and component usage mapping
+- **Files changed**:
+  - Updated `patternfly-6-research.md` with Dependency Analysis, Component Inventory, CSS Variable Inventory, CSS Class Inventory, and Migration Priority Summary sections
+  - Updated `prd.json` to mark US-002 as passing
+- **Learnings for future iterations:**
+  - Current PF5 versions: patternfly 5.0.2, react-core/icons/table 5.2.1
+  - React 18 is fully compatible with PatternFly 6
+  - 5 component files use PatternFly components: AppNav.tsx, Dashboard.tsx, TodoList.tsx, TodoModal.tsx, DeleteConfirmationModal.tsx
+  - 55+ CSS variable references across 10 files (SCSS, CSS, and TSX inline styles)
+  - 5 CSS class references across 4 files
+  - colorUtils.ts has 6 CSS variable references that need updating
+  - High priority migrations: Masthead restructuring, EmptyState API, Tile→Card, Text/TextContent deprecation
+---
