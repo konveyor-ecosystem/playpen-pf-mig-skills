@@ -40,3 +40,17 @@ Started: Wed Jan 28 04:20:17 PM EST 2026
   - colorUtils.ts has 6 CSS variable references that need updating
   - High priority migrations: Masthead restructuring, EmptyState API, Tile→Card, Text/TextContent deprecation
 ---
+
+## 2026-01-28 17:45 - US-003
+- **What was implemented**: Updated all PatternFly dependencies from v5 to v6
+- **Files changed**:
+  - `todo-app/package.json` - Updated dependency versions
+  - `todo-app/package-lock.json` - Regenerated lockfile
+  - Updated `patternfly-6-research.md` with installed PF6 versions
+  - Updated `prd.json` to mark US-003 as passing
+- **Learnings for future iterations:**
+  - PF6 installed versions: patternfly 6.4.0, react-core 6.4.1, react-icons 6.4.0, react-table 6.4.1
+  - No peer dependency warnings - all dependencies resolve cleanly
+  - Two git repos to manage: main repo (playpen-pf-mig-skills) and todo-app repo (mig-demo-apps submodule)
+  - TypeScript still compiles successfully after updating to PF6 (codemods and manual changes in later stories)
+---
