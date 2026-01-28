@@ -204,3 +204,25 @@ Started: Wed Jan 28 04:20:17 PM EST 2026
   - OnSort signature: `(event: React.MouseEvent, columnIndex: number, sortByDirection: SortByDirection, extraData: IExtraColumnData) => void`
   - Pre-existing lint errors in TodoList.tsx should be addressed in US-018 (Fix remaining TypeScript errors)
 ---
+
+## 2026-01-28 22:00 - US-011
+- **What was implemented**: Verified TodoList.tsx Dropdown and filter components are PF6 compatible
+- **Files changed**:
+  - No code changes required - components already use correct PF6 API
+  - Updated `prd.json` to mark US-011 as passing
+- **Verification performed**:
+  - Dropdown uses correct PF6 API: `isOpen`, `onOpenChange`, `toggle` prop with function receiving `toggleRef`
+  - MenuToggle uses correct PF6 API: `ref`, `onClick`, `isExpanded`
+  - DropdownList/DropdownItem: Standard container/item pattern unchanged in PF6
+  - DropdownItem `onClick` prop unchanged in PF6
+  - Switch uses correct PF6 onChange signature: `(_event, checked) => setShowOverdueOnly(checked)`
+  - TypeScript build passes
+  - Pre-existing lint errors in TodoList.tsx (react-hooks/immutability, no-explicit-any) unrelated to Dropdown/filter migration
+  - E2E tests blocked by host Playwright dependencies
+- **Learnings for future iterations:**
+  - Dropdown API is stable between PF5 and PF6 (toggle with toggleRef, isOpen, onOpenChange pattern)
+  - MenuToggle API unchanged in PF6 (ref, onClick, isExpanded)
+  - DropdownList, DropdownItem have no breaking API changes
+  - Switch onChange signature `(event, checked) => void` was already correct
+  - Codemod warning about "appendTo default changed to document.body" is informational only (no code change needed)
+---

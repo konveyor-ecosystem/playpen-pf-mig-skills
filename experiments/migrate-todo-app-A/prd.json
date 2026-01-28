@@ -190,8 +190,8 @@
         "Typecheck passes"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": "File: src/components/todos/TodoList.tsx"
+      "passes": true,
+      "notes": "Verified: Dropdown, MenuToggle, DropdownList, DropdownItem all use correct PF6 API (toggle with toggleRef, isOpen, onOpenChange, onClick). Switch uses correct PF6 onChange signature (_event, checked). Build passes. Pre-existing lint errors in file (unrelated to Dropdown/filter migration)."
     },
     {
       "id": "US-012",
