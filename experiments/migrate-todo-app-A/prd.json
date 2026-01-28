@@ -300,8 +300,8 @@
         "Typecheck passes"
       ],
       "priority": 17,
-      "passes": false,
-      "notes": "All TSX and SCSS files with pf-v5- references"
+      "passes": true,
+      "notes": "Completed: Updated 2 CSS class references in TodoList.tsx from pf-v5-u-* to pf-v6-u-* format. No SCSS files had pf-v5- class references (only CSS variables which were handled in US-016). Build passes. Pre-existing lint errors in TodoList.tsx and TodoModal.tsx (react-hooks/immutability, no-explicit-any) unrelated to US-017 scope."
     },
     {
       "id": "US-018",

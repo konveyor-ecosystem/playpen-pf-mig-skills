@@ -358,3 +358,23 @@ Started: Wed Jan 28 04:20:17 PM EST 2026
   - Breakpoints are no longer CSS variables in PF6 - use rem values directly (48rem for md, 62rem for lg)
   - Spacer tokens keep same format: --pf-t--global--spacer--[sm|md|lg]
 ---
+
+## 2026-01-29 01:00 - US-017
+- **What was implemented**: Updated CSS class references from PF5 to PF6 format
+- **Files changed**:
+  - `todo-app/src/components/todos/TodoList.tsx` - Updated 2 utility class prefixes
+  - Updated `prd.json` to mark US-017 as passing
+- **Verification performed**:
+  - Searched for all pf-v5- references in source code
+  - Found and updated 2 utility classes:
+    - `pf-v5-u-p-md` → `pf-v6-u-p-md` (line 180, PageSection)
+    - `pf-v5-u-mr-xs` → `pf-v6-u-mr-xs` (line 334, Label)
+  - No SCSS files had pf-v5- class references (only CSS variables which were already handled in US-016)
+  - TypeScript build passes
+  - Pre-existing lint errors in TodoList.tsx and TodoModal.tsx (react-hooks/immutability, no-explicit-any) unrelated to US-017 scope
+- **Learnings for future iterations:**
+  - PF6 utility classes follow same naming convention: pf-v5-u-* → pf-v6-u-*
+  - Common utility classes: pf-v6-u-p-[size] (padding), pf-v6-u-m[direction]-[size] (margin)
+  - Sizes: xs, sm, md, lg, xl, 2xl, 3xl, 4xl
+  - The codemods don't automatically update CSS class references in JSX className strings
+---
