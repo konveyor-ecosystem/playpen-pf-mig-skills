@@ -227,8 +227,8 @@
         "Typecheck passes"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": "File: src/components/todos/TodoModal.tsx"
+      "passes": true,
+      "notes": "Verified: Form, FormGroup (with fieldId), TextInput, TextArea all use correct PF6 onChange signatures (_event, value). FormHelperText/HelperText/HelperTextItem pattern unchanged. validated prop uses valid values ('error', 'default'). ActionGroup unchanged. Codemods (US-004) already handled necessary updates. Build passes. Pre-existing lint errors in file (react-hooks, no-explicit-any) unrelated to US-013 scope."
     },
     {
       "id": "US-014",

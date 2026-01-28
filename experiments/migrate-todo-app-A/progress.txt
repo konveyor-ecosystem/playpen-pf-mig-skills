@@ -248,3 +248,26 @@ Started: Wed Jan 28 04:20:17 PM EST 2026
   - Checkbox onChange signature `(event, checked) => void` works fine even if you don't use the parameters
   - Pre-existing lint errors should be tracked separately and addressed in dedicated cleanup story (US-018)
 ---
+
+## 2026-01-28 23:00 - US-013
+- **What was implemented**: Verified TodoModal.tsx Form components are PF6 compatible
+- **Files changed**:
+  - No code changes required - Form components already PF6 compatible
+  - Updated `prd.json` to mark US-013 as passing
+- **Verification performed**:
+  - Form component uses standard `onSubmit` prop (unchanged in PF6)
+  - FormGroup has required `fieldId` prop on all 6 form groups (todo-title, todo-description, todo-date, todo-priority, todo-color, todo-tags)
+  - TextInput already uses PF6 onChange signature: `(_event, value) => handleFieldChange(...)`
+  - TextArea already uses PF6 onChange signature: `(_event, value) => handleFieldChange(...)` and has `id` prop
+  - FormHelperText > HelperText > HelperTextItem pattern unchanged in PF6
+  - validated prop uses valid PF6 values: `'error'` and `'default'`
+  - ActionGroup unchanged between PF5 and PF6
+  - TypeScript build passes
+  - Pre-existing lint errors in TodoModal.tsx (react-hooks/immutability, no-explicit-any) unrelated to US-013 scope
+- **Learnings for future iterations:**
+  - Form, FormGroup, ActionGroup have no breaking API changes in PF6
+  - TextInput and TextArea onChange signatures `(event, value) => void` were already handled by codemods in US-004
+  - FormGroup requires `fieldId` prop - should match the input element's `id`
+  - FormHelperText/HelperText/HelperTextItem wrapper pattern is stable between PF5 and PF6
+  - validated prop values ('error', 'default', 'success', 'warning') remain consistent in PF6
+---
