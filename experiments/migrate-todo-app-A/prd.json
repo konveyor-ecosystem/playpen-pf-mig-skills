@@ -246,8 +246,8 @@
         "Typecheck passes"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": "File: src/components/todos/TodoModal.tsx"
+      "passes": true,
+      "notes": "Completed: Migrated Modal from deprecated import to new PF6 structure (ModalHeader, ModalBody, ModalFooter). Updated CSS variable to PF6 token format. DatePicker onChange already PF6 compatible. Tile using deprecated import (appropriate for backward compatibility). Build passes. Pre-existing lint errors in file (react-hooks/immutability, no-explicit-any) unrelated to US-014 scope. E2E tests blocked by host Playwright dependencies."
     },
     {
       "id": "US-015",

@@ -271,3 +271,30 @@ Started: Wed Jan 28 04:20:17 PM EST 2026
   - FormHelperText/HelperText/HelperTextItem wrapper pattern is stable between PF5 and PF6
   - validated prop values ('error', 'default', 'success', 'warning') remain consistent in PF6
 ---
+
+## 2026-01-28 23:30 - US-014
+- **What was implemented**: Updated TodoModal.tsx Modal, DatePicker, and Tile components for PF6
+- **Files changed**:
+  - `todo-app/src/components/todos/TodoModal.tsx` - Migrated Modal to new PF6 structure, updated CSS variable
+  - Updated `prd.json` to mark US-014 as passing
+- **Verification performed**:
+  - Migrated Modal from `@patternfly/react-core/deprecated` to new PF6 Modal from `@patternfly/react-core`
+  - Added ModalHeader, ModalBody, ModalFooter components replacing custom div wrappers
+  - ModalHeader uses `title` prop instead of nested Content components
+  - ModalFooter replaces ActionGroup wrapper in custom footer div
+  - Added `variant="medium"` to Modal for consistent sizing
+  - DatePicker onChange signature already PF6 compatible: `(_event, value) => handleDateChange(value)`
+  - Tile still imported from deprecated path (appropriate for backward compatibility until full Card migration)
+  - Updated inline CSS variable from `--pf-v5-global--BorderWidth--sm` to `--pf-t--global--border--width--regular`
+  - Removed unused imports: Content, ContentVariants, ActionGroup
+  - TypeScript build passes
+  - Pre-existing lint errors in TodoModal.tsx (react-hooks/immutability, no-explicit-any) unrelated to US-014 scope
+  - E2E tests blocked by host Playwright dependencies
+- **Learnings for future iterations:**
+  - PF6 Modal uses composed structure: `<Modal><ModalHeader/><ModalBody/><ModalFooter/></Modal>`
+  - ModalHeader takes `title` prop for simple titles, or children for custom header content
+  - ModalFooter replaces the ActionGroup-in-div pattern - just put buttons directly in ModalFooter
+  - CSS token for border width: `--pf-v5-global--BorderWidth--sm` → `--pf-t--global--border--width--regular` (1px)
+  - Other border width tokens: `--pf-t--global--border--width--strong` (2px), `--pf-t--global--border--width--extra-strong` (3px)
+  - Deprecated Modal import is no longer needed after migrating to new Modal structure
+---
