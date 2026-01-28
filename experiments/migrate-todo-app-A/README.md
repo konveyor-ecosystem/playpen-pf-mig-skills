@@ -22,3 +22,8 @@ First experiment using a Ralph loop to do a Patternfly 5->6 migration.
 - Allow the skill to break the migration plan out into sufficiently scoped tasks so they can executed and verified in a single iteration of a ralph loop (i.e keep context to ~<50% of the models context window, guidance is ~100k for Opus, ~500k for Sonnet>)
 - Allow the skill the execute the migration plan and verify each step
 - Allow the skill to perform a visual regression test on the major screens of the app
+
+## Result of experiment
+* See: [./sample_run_output.txt](./sample_run_output.txt)
+* See: https://github.com/jwmatthews/mig-demo-apps/pull/2/changes
+* See: [./after_migration.png](./after_migration.png)
