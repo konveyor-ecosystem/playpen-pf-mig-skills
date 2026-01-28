@@ -119,8 +119,8 @@
         "Typecheck passes"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "File: src/components/dashboard/Dashboard.tsx"
+      "passes": true,
+      "notes": "Verified: Card, CardTitle, CardBody, Grid, GridItem have no API changes in PF6. PageSection already updated by codemods. Build passes. E2E blocked by host Playwright deps."
     },
     {
       "id": "US-008",
