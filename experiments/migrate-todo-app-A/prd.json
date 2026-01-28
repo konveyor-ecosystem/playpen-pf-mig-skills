@@ -172,8 +172,8 @@
         "Typecheck passes"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": "File: src/components/todos/TodoList.tsx"
+      "passes": true,
+      "notes": "Verified: Table, Thead, Tbody, Tr, Th, Td have no API changes in PF6. Th sort prop structure (sortBy, onSort, columnIndex) compatible with PF6 ThSortType interface. Build passes. Pre-existing lint errors in file (unrelated to Table migration)."
     },
     {
       "id": "US-011",

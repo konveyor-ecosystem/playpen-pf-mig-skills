@@ -183,3 +183,24 @@ Started: Wed Jan 28 04:20:17 PM EST 2026
   - FormGroup requires `fieldId` prop but the todo-app already had it correctly
   - Flex/FlexItem responsive props (justifyContent with `{default: '...'}` pattern) unchanged in PF6
 ---
+
+## 2026-01-28 21:30 - US-010
+- **What was implemented**: Verified TodoList.tsx Table components are PF6 compatible
+- **Files changed**:
+  - No code changes required - @patternfly/react-table components have no breaking API changes
+  - Updated `prd.json` to mark US-010 as passing
+- **Verification performed**:
+  - Table, Thead, Tbody, Tr, Th, Td have no breaking API changes in PF6
+  - Th sort prop structure verified: `{ sortBy: ISortBy, onSort: OnSort, columnIndex: number }`
+  - ISortBy interface: `{ index?: number; direction?: 'asc' | 'desc' }`
+  - Current code matches PF6 ThSortType interface exactly
+  - Td component API unchanged
+  - TypeScript build passes
+  - Pre-existing lint errors in TodoList.tsx (react-hooks/immutability, no-explicit-any) unrelated to Table migration
+  - E2E tests blocked by host Playwright dependencies
+- **Learnings for future iterations:**
+  - @patternfly/react-table components (Table, Thead, Tbody, Tr, Th, Td) are stable between PF5 and PF6
+  - Th sort prop structure unchanged: `sortBy` takes `{ index, direction }`, `onSort` callback, `columnIndex` number
+  - OnSort signature: `(event: React.MouseEvent, columnIndex: number, sortByDirection: SortByDirection, extraData: IExtraColumnData) => void`
+  - Pre-existing lint errors in TodoList.tsx should be addressed in US-018 (Fix remaining TypeScript errors)
+---
