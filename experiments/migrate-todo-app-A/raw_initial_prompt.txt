@@ -1,0 +1,6 @@
+Your job is to create a prompt in markdown and write it to the current working directory with the best name you see for claude code to use in future.  Ask me any clarifying
+  questions you need to improve this prompt in a serial nature.  I want you to help me migrate the patternfly 5 application under the "todo-app" application to patternfly 6.
+  Patternfly 6 upgrade documentation is located at https://www.patternfly.org/get-started/upgrade.  Your first task is to research how to upgrade to patternfly 6 from 5 and to
+  record your research in markdown documents to guide later execution.  Be as thorough as possible in researching migration guidance.  Next inspect the application and consider
+  based on what you know what the upgrade steps will be to address to move to patternfly 6.  Develop a migration plan to move to patternfly 6.  Break the plan down into discrete
+  units of work that are easily accomplished by an AI agent under 100k tokens per session.  This migration plan is intended to be executed by an ai agent in a subsequent loop.

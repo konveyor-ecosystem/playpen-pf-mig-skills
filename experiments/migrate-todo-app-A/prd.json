@@ -1,0 +1,343 @@
+{
+  "project": "Todo App PatternFly Migration",
+  "branchName": "ralph/patternfly-6-migration",
+  "description": "Migrate the todo-app application from PatternFly 5 to PatternFly 6, updating dependencies, component APIs, CSS variables, and verifying functionality through e2e tests.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Research PatternFly 6 upgrade documentation",
+      "description": "As a developer, I need to research the official PatternFly 6 upgrade guide to understand all breaking changes and migration requirements.",
+      "acceptanceCriteria": [
+        "Fetch content from https://www.patternfly.org/get-started/upgrade",
+        "Document all breaking changes between PatternFly 5 and 6",
+        "Identify deprecated components and their replacements",
+        "Document API changes for components used in todo-app (Masthead, Card, Table, Modal, Form, etc.)",
+        "Document CSS/styling changes (--pf-v5-* to v6 equivalents)",
+        "Identify available codemods or migration tools",
+        "Create patternfly-6-research.md with findings in project root",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Analyze dependencies and map component usage",
+      "description": "As a developer, I need to analyze current dependencies and create an inventory of all PatternFly components used in the application.",
+      "acceptanceCriteria": [
+        "Document current PatternFly package versions from package.json",
+        "List all PatternFly-related dependencies",
+        "Verify React version compatibility with PatternFly 6",
+        "Search all imports from @patternfly/react-core, react-icons, react-table",
+        "Create component usage matrix with file paths",
+        "Search for --pf-v5- CSS variable references and pf-v5- class references",
+        "Add dependency analysis, component inventory, and CSS inventory to patternfly-6-research.md",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Update PatternFly dependencies to v6",
+      "description": "As a developer, I need to update all PatternFly packages to version 6.",
+      "acceptanceCriteria": [
+        "Update @patternfly/patternfly to latest v6",
+        "Update @patternfly/react-core to latest v6",
+        "Update @patternfly/react-icons to latest v6",
+        "Update @patternfly/react-table to latest v6",
+        "Run npm install successfully",
+        "Document any peer dependency warnings in patternfly-6-research.md",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Run PatternFly 6 codemods",
+      "description": "As a developer, I need to run any available PatternFly 6 codemods to automate as many migrations as possible.",
+      "acceptanceCriteria": [
+        "Identify available codemods from research (e.g., @patternfly/pf-codemods)",
+        "Run codemods on the codebase",
+        "Document which changes were made automatically",
+        "Document which changes require manual intervention",
+        "Commit codemod changes for traceability",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Update main.tsx entry point",
+      "description": "As a developer, I need to update the main entry point file for PatternFly 6 compatibility.",
+      "acceptanceCriteria": [
+        "Update PatternFly CSS import paths if changed in v6",
+        "Verify React 18 createRoot usage is compatible",
+        "TypeScript compiles without errors (npm run build)",
+        "Lint passes (npm run lint)",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "File: src/main.tsx"
+    },
+    {
+      "id": "US-006",
+      "title": "Update AppNav.tsx Masthead components",
+      "description": "As a developer, I need to update the navigation component's Masthead, Toolbar, and related components for PatternFly 6.",
+      "acceptanceCriteria": [
+        "Update Masthead, MastheadMain, MastheadBrand, MastheadContent component APIs per PF6 changes",
+        "Update Toolbar, ToolbarContent, ToolbarItem component APIs per PF6 changes",
+        "Update Button component props if changed",
+        "Update Text/TextContent/TextVariants if changed",
+        "TypeScript compiles without errors",
+        "Lint passes",
+        "Verify navigation works via Playwright: npm run test:e2e -- e2e/tests/navigation.spec.ts",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "File: src/components/layout/AppNav.tsx"
+    },
+    {
+      "id": "US-007",
+      "title": "Update Dashboard.tsx Card and Grid components",
+      "description": "As a developer, I need to update the Card and Grid layout components in the Dashboard.",
+      "acceptanceCriteria": [
+        "Update Card, CardTitle, CardBody component APIs per PF6 changes",
+        "Update Grid, GridItem component APIs per PF6 changes",
+        "Update PageSection variant prop if changed",
+        "TypeScript compiles without errors",
+        "Lint passes",
+        "Verify dashboard statistics display via Playwright: npm run test:e2e -- e2e/tests/dashboard/statistics.spec.ts",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "File: src/components/dashboard/Dashboard.tsx"
+    },
+    {
+      "id": "US-008",
+      "title": "Update Dashboard.tsx DataList components",
+      "description": "As a developer, I need to update the DataList components used for displaying overdue todos.",
+      "acceptanceCriteria": [
+        "Update DataList, DataListItem, DataListItemRow component APIs per PF6 changes",
+        "Update DataListItemCells, DataListCell width prop if changed",
+        "Update Checkbox component API per PF6 changes",
+        "Update Label component API per PF6 changes",
+        "TypeScript compiles without errors",
+        "Lint passes",
+        "Verify overdue list displays via Playwright: npm run test:e2e -- e2e/tests/dashboard/overdue-list.spec.ts",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "File: src/components/dashboard/Dashboard.tsx"
+    },
+    {
+      "id": "US-009",
+      "title": "Update Dashboard.tsx Form components",
+      "description": "As a developer, I need to update the quick create form components in the Dashboard.",
+      "acceptanceCriteria": [
+        "Update Form, FormGroup component APIs per PF6 changes",
+        "Update TextInput onChange signature if changed",
+        "Update ActionGroup component API per PF6 changes",
+        "Update Button, Flex, FlexItem if changed",
+        "TypeScript compiles without errors",
+        "Lint passes",
+        "Verify quick create works via Playwright: npm run test:e2e -- e2e/tests/dashboard/quick-create.spec.ts",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "File: src/components/dashboard/Dashboard.tsx"
+    },
+    {
+      "id": "US-010",
+      "title": "Update TodoList.tsx Table components",
+      "description": "As a developer, I need to update the Table components from @patternfly/react-table.",
+      "acceptanceCriteria": [
+        "Update Table, Thead, Tbody, Tr, Th, Td component APIs per PF6 changes",
+        "Update Th sort prop structure if changed",
+        "Update Td component API per PF6 changes",
+        "TypeScript compiles without errors",
+        "Lint passes",
+        "Verify table displays and sorts via Playwright: npm run test:e2e -- e2e/tests/todo-list/sorting.spec.ts",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "File: src/components/todos/TodoList.tsx"
+    },
+    {
+      "id": "US-011",
+      "title": "Update TodoList.tsx Dropdown and filter components",
+      "description": "As a developer, I need to update the Dropdown, MenuToggle, and filter-related components.",
+      "acceptanceCriteria": [
+        "Update Dropdown, MenuToggle, DropdownList, DropdownItem component APIs per PF6 changes",
+        "Update MenuToggle toggle prop pattern if changed",
+        "Update DropdownItem onClick if changed",
+        "Update Switch component API per PF6 changes",
+        "TypeScript compiles without errors",
+        "Lint passes",
+        "Verify filtering works via Playwright: npm run test:e2e -- e2e/tests/todo-list/filtering.spec.ts",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "File: src/components/todos/TodoList.tsx"
+    },
+    {
+      "id": "US-012",
+      "title": "Update TodoList.tsx remaining components",
+      "description": "As a developer, I need to update the remaining components in TodoList including PageSection, EmptyState, Checkbox, Label.",
+      "acceptanceCriteria": [
+        "Update PageSection variant prop if changed",
+        "Update EmptyState, EmptyStateBody component APIs per PF6 changes",
+        "Update Checkbox onChange signature if changed",
+        "Update Label color prop if changed",
+        "Update Button, Text, TextContent, TextVariants, Flex, FlexItem if changed",
+        "TypeScript compiles without errors",
+        "Lint passes",
+        "Verify CRUD operations via Playwright: npm run test:e2e -- e2e/tests/todo-list/crud-operations.spec.ts",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "File: src/components/todos/TodoList.tsx"
+    },
+    {
+      "id": "US-013",
+      "title": "Update TodoModal.tsx Form components",
+      "description": "As a developer, I need to update the form components in the TodoModal.",
+      "acceptanceCriteria": [
+        "Update Form, FormGroup component APIs per PF6 changes",
+        "Update TextInput, TextArea onChange signatures if changed",
+        "Update FormHelperText, HelperText, HelperTextItem pattern if changed",
+        "Update validated prop values if changed",
+        "Update ActionGroup component API per PF6 changes",
+        "TypeScript compiles without errors",
+        "Lint passes",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": "File: src/components/todos/TodoModal.tsx"
+    },
+    {
+      "id": "US-014",
+      "title": "Update TodoModal.tsx Modal, DatePicker, and Tile components",
+      "description": "As a developer, I need to update the Modal, DatePicker, and Tile components in TodoModal.",
+      "acceptanceCriteria": [
+        "Update Modal component API per PF6 changes (header/footer patterns)",
+        "Update DatePicker onChange signature if changed",
+        "Update Tile component API per PF6 changes",
+        "Update Button, Text, TextContent, TextVariants, Flex, FlexItem if changed",
+        "TypeScript compiles without errors",
+        "Lint passes",
+        "Verify create modal works via Playwright: npm run test:e2e -- e2e/tests/modal/create-modal.spec.ts",
+        "Verify edit modal works via Playwright: npm run test:e2e -- e2e/tests/modal/edit-modal.spec.ts",
+        "Typecheck passes"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": "File: src/components/todos/TodoModal.tsx"
+    },
+    {
+      "id": "US-015",
+      "title": "Update DeleteConfirmationModal.tsx",
+      "description": "As a developer, I need to update the delete confirmation modal component.",
+      "acceptanceCriteria": [
+        "Update Modal component API per PF6 changes",
+        "Update Button variant='danger' if changed",
+        "Update Text, TextContent, TextVariants if changed",
+        "TypeScript compiles without errors",
+        "Lint passes",
+        "Verify delete modal works via Playwright: npm run test:e2e -- e2e/tests/modal/delete-modal.spec.ts",
+        "Typecheck passes"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": "File: src/components/todos/DeleteConfirmationModal.tsx"
+    },
+    {
+      "id": "US-016",
+      "title": "Update CSS variable references",
+      "description": "As a developer, I need to update all CSS variable references from PF5 to PF6 format.",
+      "acceptanceCriteria": [
+        "Search for --pf-v5-global-- in all files",
+        "Replace with PatternFly 6 equivalent variable names",
+        "Update inline styles in Dashboard.tsx",
+        "Update inline styles in TodoList.tsx",
+        "Update inline styles in TodoModal.tsx",
+        "TypeScript compiles without errors",
+        "Lint passes",
+        "Application builds successfully (npm run build)",
+        "Typecheck passes"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": "Files: src/App.scss, src/components/**/*.scss, all TSX files"
+    },
+    {
+      "id": "US-017",
+      "title": "Update CSS class references",
+      "description": "As a developer, I need to update all CSS class references from PF5 to PF6 format.",
+      "acceptanceCriteria": [
+        "Search for pf-v5- in all files",
+        "Replace with PatternFly 6 equivalent class names",
+        "Update TodoList.tsx class references (e.g., pf-v5-u-p-md, pf-v5-u-mr-xs)",
+        "Update any SCSS files with PF5 class overrides",
+        "TypeScript compiles without errors",
+        "Lint passes",
+        "Application builds successfully",
+        "Typecheck passes"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": "All TSX and SCSS files with pf-v5- references"
+    },
+    {
+      "id": "US-018",
+      "title": "Fix remaining TypeScript errors",
+      "description": "As a developer, I need to resolve any remaining TypeScript errors after component migrations.",
+      "acceptanceCriteria": [
+        "Run npm run build and capture all TypeScript errors",
+        "Fix each error in order of dependency",
+        "Ensure no type assertions are used to suppress real issues",
+        "All files compile without errors",
+        "Lint passes on all files",
+        "Build completes successfully",
+        "Typecheck passes"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Run full E2E test suite and verify application",
+      "description": "As a developer, I need to verify all functionality works correctly after migration by running the complete Playwright e2e test suite.",
+      "acceptanceCriteria": [
+        "Run npm run test:e2e - all tests pass",
+        "Verify navigation between Dashboard and Todo List works",
+        "Verify CRUD operations work (create, read, update, delete todos)",
+        "Verify filtering by priority, color, and overdue status works",
+        "Verify sorting by title and date works",
+        "Verify mark as done functionality works",
+        "Verify statistics on dashboard update correctly",
+        "Document any test failures and their resolutions in patternfly-6-research.md",
+        "Typecheck passes"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
