@@ -8,6 +8,8 @@ Started: Wed Jan 28 04:20:17 PM EST 2026
 - Run npm commands from the todo-app directory: `npm run build --prefix .../todo-app`
 - The mig-demo-apps directory contains a separate git repo - be careful not to confuse the two repos
 - PatternFly 6 codemods: `npx @patternfly/pf-codemods ./src --v6 --fix`
+- PF6 CSS token naming: `--pf-v5-global--*` → `--pf-t--global--*` (new semantic token format)
+- Use https://www.patternfly.org/tokens/all-patternfly-tokens for mapping old CSS vars to new semantic tokens
 
 ---
 
@@ -83,4 +85,21 @@ Started: Wed Jan 28 04:20:17 PM EST 2026
     - SCSS files still have --pf-v5-* variables (not handled by JS codemod)
   - The codemods add `data-codemods` attributes to modified elements for traceability
   - TypeScript builds successfully after codemods
+---
+
+## 2026-01-28 18:45 - US-005
+- **What was implemented**: Updated main.tsx entry point for PatternFly 6 compatibility
+- **Files changed**:
+  - `todo-app/src/index.css` - Updated CSS variables from PF5 to PF6 format
+  - Updated `prd.json` to mark US-005 as passing
+- **Learnings for future iterations:**
+  - main.tsx itself didn't need changes - already uses React 18 createRoot correctly
+  - PatternFly CSS imports remain the same (`@patternfly/patternfly/patternfly.css`)
+  - CSS variable mappings for global styles:
+    - `--pf-v5-global--FontFamily--text` → `--pf-t--global--font--family--body`
+    - `--pf-v5-global--FontSize--md` → `--pf-t--global--font--size--body--default`
+    - `--pf-v5-global--Color--100` → `--pf-t--global--text--color--regular`
+    - `--pf-v5-global--BackgroundColor--100` → `--pf-t--global--background--color--primary--default`
+  - Pre-existing lint errors in TodoList.tsx and TodoModal.tsx are unrelated to US-005 changes
+  - Build and typecheck pass successfully
 ---
