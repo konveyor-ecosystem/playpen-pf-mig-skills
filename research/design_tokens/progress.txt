@@ -77,3 +77,40 @@ Started: Wed Jan 28 02:30:10 PM EST 2026
   - Deprecated components: Chip→Label, Tile→Card, ApplicationLauncher→Menu, PageHeader→Masthead
   - Gap frequency order: Color tokens (very high) > Component tokens (high) > Custom overrides (high) > Context-dependent (medium) > Removed tokens (low) > Structural changes (low)
 ---
+
+## 2026-01-28 - US-004
+- **What was implemented**: Technical implementation details for detection and suggestion tooling
+- **Files changed**:
+  - Created `research/04_technical_implementation_details.md`
+  - Updated `prd.json` to mark US-004 as complete
+- **Content covered**:
+  - Token mapping documentation:
+    - 64 global non-color token mappings with V5→V6 table
+    - 168 color tokens cataloged (require human judgment)
+    - 2,680 component-specific deprecated tokens enumerated
+    - 7 tokens marked "SKIP" (removed without replacement)
+    - 600+ new V6 tokens in `tokensToPrefixWithT`
+  - Detection patterns:
+    - Primary CSS regex: `/(?<!:)(--pf-v5-[\w-]+)/g`
+    - File extension filter: `\.(s?css|less|md)$`
+    - AST node types: ImportSpecifier, ImportDefaultSpecifier, Identifier, Literal
+    - Custom override detection patterns (variable overrides, nested selectors, media queries)
+    - Directional property detection and transformation
+  - Replacement heuristics:
+    - Property context mapping (color→text, background-color→background, etc.)
+    - Semantic intent keyword extraction (primary→brand, success→status--success, etc.)
+    - Numeric suffix to semantic translation (100→primary, 200→secondary, etc.)
+    - Context-based suggestion matrix for split tokens
+    - Confidence scoring model (0-100% with weighted factors)
+  - Implementation architecture:
+    - Detection pipeline design (File Discovery → Pattern Matching → Token Extraction)
+    - Suggestion pipeline design (Token Analysis → Mapping Lookup → Confidence Scoring)
+    - TypeScript data structures for TokenDetection and ReplacementSuggestion
+  - Reference data sources (7 token list files totaling ~550KB)
+- **Learnings for future iterations:**
+  - Token counts refined: 64 non-color mappings (not ~50), 168 color tokens (not ~150), 2,680 component tokens (not ~3000)
+  - Confidence scoring should use weighted factors: direct mapping (+40%), single context (+30%), semantic match (+20%), numeric pattern (+10%)
+  - Some "mapped" tokens have different values in V6 (e.g., `FontSize_2xl`: 1.5rem→1.375rem) - flag for visual verification
+  - pf-codemods token list files in `shared-codemod-helpers/src/tokenLists/` are authoritative source
+  - Negative lookbehind in regex `(?<!:)` is critical to avoid matching codemod comment annotations
+---
