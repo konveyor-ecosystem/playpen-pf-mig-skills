@@ -25,3 +25,26 @@ Started: Wed Jan 28 02:30:10 PM EST 2026
   - "Hot pink" fallback is used by codemods for unmatchable tokens
   - Key documentation sources: patternfly.org/tokens/about-tokens/, patternfly.org/get-started/upgrade
 ---
+
+## 2026-01-28 - US-002
+- **What was implemented**: Deep analysis of pf-codemods tooling suite
+- **Files changed**:
+  - Created `research/02_pf_codemods_analysis.md`
+  - Updated `prd.json` to mark US-002 as complete
+- **Content covered**:
+  - Repository structure analysis (4 packages: eslint-plugin-pf-codemods, css-vars-updater, class-name-updater, shared-codemod-helpers)
+  - 106 v6 migration rules cataloged
+  - Detection patterns: ESLint AST for React tokens, regex for CSS vars/classes
+  - Three main token codemods analyzed: tokens-update, tokensPrefixWithT, css-vars-updater
+  - Hot pink fallback mechanism documented (`t_temp_dev_tbd` / `--pf-t--temp--dev--tbd`)
+  - Token mapping data structures: ~50 non-color mappings, ~150 color tokens, ~3000 deprecated component tokens
+  - Six categories of manual intervention scenarios identified
+- **Learnings for future iterations:**
+  - pf-codemods explicitly states "not designed to fix all build errors" - sets expectations
+  - Color tokens get hot pink placeholder with comment preserving original; requires human semantic judgment
+  - Component-specific tokens (~3000) have NO automated mapping - biggest gap
+  - CSS detection uses negative lookbehind `(?<!:)` to avoid matching comment annotations
+  - Tokens marked "SKIP" in mapping = removed functionality, no replacement exists
+  - Custom CSS overrides (direct variable overrides, nested selectors) are NOT detected at all
+  - Key source: `shared-codemod-helpers/src/tokenLists/` contains all mapping data
+---

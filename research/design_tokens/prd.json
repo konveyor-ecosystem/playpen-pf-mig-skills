@@ -37,7 +37,7 @@
         "Checkpoint passed: Can articulate exactly what pf-codemods handles and where it explicitly stops"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Key resource: https://github.com/patternfly/pf-codemods/tree/main/packages/eslint-plugin-pf-codemods/src/rules/v6"
     },
     {
