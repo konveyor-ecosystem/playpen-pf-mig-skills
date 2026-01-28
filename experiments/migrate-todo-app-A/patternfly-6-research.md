@@ -580,6 +580,52 @@ Based on the PRD, these files need updates:
 
 ---
 
+## Codemod Execution Results (US-004)
+
+### Command Used
+```bash
+npx @patternfly/pf-codemods ./src --v6 --fix
+```
+
+### Automatic Changes Made (95 errors fixed)
+
+| Category | Change | Files Affected |
+|----------|--------|----------------|
+| Text deprecation | Text/TextContent/TextVariants → Content/ContentVariants | All 5 component files |
+| Masthead restructuring | MastheadBrand → MastheadLogo, wrapped in new MastheadBrand | AppNav.tsx |
+| Modal deprecation | Imports updated to @patternfly/react-core/deprecated | TodoModal.tsx, DeleteConfirmationModal.tsx |
+| Tile deprecation | Imports updated to @patternfly/react-core/deprecated | TodoModal.tsx |
+| PageSection variant | variant="light" removed, hasBodyWrapper={false} added | Dashboard.tsx, TodoList.tsx |
+| Button icons | Icon children moved to `icon` prop | Dashboard.tsx, TodoList.tsx |
+| CSS tokens (inline) | --pf-v5-global--spacer--* → --pf-t--global--spacer--* | TodoList.tsx |
+| CSS tokens (inline) | --pf-v5-global--FontSize--* → --pf-t--global--font--size--* | Dashboard.tsx |
+
+### Manual Intervention Required (8 warnings)
+
+| Category | Warning | Action Needed |
+|----------|---------|---------------|
+| Color tokens | Replaced with `--pf-t--temp--dev--tbd` placeholder | Map to proper PF6 color tokens |
+| MenuToggle | Icon-only toggle styling changed | Review MenuToggle usage |
+| HelperTextItem | screenReaderText behavior change | Review validation messages |
+| Dropdown | appendTo default changed to document.body | Verify dropdown positioning |
+| CSS classes | pf-v5-* classes not updated by JS codemod | Update manually to pf-v6-* |
+| SCSS files | --pf-v5-* variables not updated | Update manually to --pf-t--* |
+
+### Files Modified by Codemods
+
+1. `src/components/dashboard/Dashboard.tsx` (75 insertions/deletions)
+2. `src/components/layout/AppNav.tsx` (19 insertions/deletions)
+3. `src/components/todos/DeleteConfirmationModal.tsx` (29 insertions/deletions)
+4. `src/components/todos/TodoList.tsx` (35 insertions/deletions)
+5. `src/components/todos/TodoModal.tsx` (43 insertions/deletions)
+6. `src/utils/colorUtils.ts` (10 insertions/deletions)
+
+### Post-Codemod Status
+- **TypeScript**: Compiles successfully (npm run build passes)
+- **Remaining work**: SCSS/CSS variable updates, CSS class updates, color token mapping
+
+---
+
 ## Migration Priority Summary
 
 ### High Priority (Breaking Changes)

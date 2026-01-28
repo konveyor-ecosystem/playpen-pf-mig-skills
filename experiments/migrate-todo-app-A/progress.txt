@@ -54,3 +54,33 @@ Started: Wed Jan 28 04:20:17 PM EST 2026
   - Two git repos to manage: main repo (playpen-pf-mig-skills) and todo-app repo (mig-demo-apps submodule)
   - TypeScript still compiles successfully after updating to PF6 (codemods and manual changes in later stories)
 ---
+
+## 2026-01-28 18:15 - US-004
+- **What was implemented**: Ran PatternFly 6 codemods to automate migration
+- **Files changed**:
+  - `todo-app/src/components/dashboard/Dashboard.tsx` - Text→Content, PageSection variant removed, CSS tokens updated
+  - `todo-app/src/components/layout/AppNav.tsx` - MastheadBrand→MastheadLogo, Text→Content, Masthead structure updated
+  - `todo-app/src/components/todos/DeleteConfirmationModal.tsx` - Modal imports to deprecated path, Text→Content
+  - `todo-app/src/components/todos/TodoList.tsx` - Text→Content, PageSection hasBodyWrapper, Button icon prop, CSS tokens
+  - `todo-app/src/components/todos/TodoModal.tsx` - Modal and Tile imports to deprecated paths, Text→Content
+  - `todo-app/src/utils/colorUtils.ts` - CSS color tokens replaced with temp dev tokens
+  - Updated `prd.json` to mark US-004 as passing
+- **Learnings for future iterations:**
+  - Codemods fixed 95 errors automatically, reduced to 0 errors with 8 warnings
+  - Automatic changes made:
+    - Text/TextContent/TextVariants → Content/ContentVariants
+    - MastheadBrand → MastheadLogo, wrapped in new MastheadBrand (with data-codemods attr)
+    - Modal and Tile imports updated to deprecated paths (@patternfly/react-core/deprecated)
+    - PageSection variant="light" → hasBodyWrapper={false} (unsupported variants removed)
+    - Button icons moved from children to `icon` prop
+    - CSS tokens --pf-v5-global--* → --pf-t--global--* format
+  - Manual intervention still needed:
+    - Color tokens replaced with `--pf-t--temp--dev--tbd` placeholder (needs proper mapping)
+    - MenuToggle icon-only toggle styling warning
+    - HelperTextItem screenReaderText behavior change (6 warnings)
+    - Dropdown appendTo default changed to document.body
+    - CSS class references still have pf-v5- prefix (not handled by this codemod)
+    - SCSS files still have --pf-v5-* variables (not handled by JS codemod)
+  - The codemods add `data-codemods` attributes to modified elements for traceability
+  - TypeScript builds successfully after codemods
+---
