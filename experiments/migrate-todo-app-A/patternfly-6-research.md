@@ -316,3 +316,272 @@ Based on the PRD, these files need updates:
 - `src/components/todos/DeleteConfirmationModal.tsx` - Modal, Button
 - All SCSS files with `--pf-v5-*` variables
 - All TSX files with `pf-v5-*` class references
+
+---
+
+## Dependency Analysis
+
+### Current PatternFly Package Versions (PF5)
+
+| Package | Current Version |
+|---------|-----------------|
+| @patternfly/patternfly | 5.0.2 |
+| @patternfly/react-core | 5.2.1 |
+| @patternfly/react-icons | 5.2.1 |
+| @patternfly/react-table | 5.2.1 |
+
+### React Compatibility
+
+| Package | Current Version | PF6 Compatibility |
+|---------|-----------------|-------------------|
+| react | ^18.0.0 | ✅ Supported (PF6 supports React 17, 18, 19) |
+| react-dom | ^18.0.0 | ✅ Supported |
+
+**Note**: React 18 createRoot usage is fully compatible with PatternFly 6.
+
+### Other Dependencies (No changes required)
+
+- react-router-dom: ^6.0.0
+- vite: ^5.0.0
+- typescript: ^5.0.0
+- sass: ^1.69.0
+
+---
+
+## Component Inventory
+
+### @patternfly/react-core Components by File
+
+#### src/components/layout/AppNav.tsx
+| Component | Migration Notes |
+|-----------|-----------------|
+| Masthead | Restructured in PF6 |
+| MastheadMain | Renamed (was container, now wrapper for MastheadBrand) |
+| MastheadBrand | Renamed to MastheadLogo in PF6 |
+| MastheadContent | No changes |
+| Toolbar | No significant changes |
+| ToolbarContent | No significant changes |
+| ToolbarItem | `variant` prop options updated |
+| Button | Icon children -> `icon` prop |
+| Text | **DEPRECATED** - Replace with Content |
+| TextContent | **DEPRECATED** - Replace with Content |
+| TextVariants | **DEPRECATED** - Use component prop on Content |
+
+#### src/components/dashboard/Dashboard.tsx
+| Component | Migration Notes |
+|-----------|-----------------|
+| PageSection | `variant` prop may change |
+| Grid | No significant changes |
+| GridItem | No significant changes |
+| Card | New selectableActions API |
+| CardTitle | No significant changes |
+| CardBody | No significant changes |
+| Button | Icon children -> `icon` prop |
+| Text | **DEPRECATED** - Replace with Content |
+| TextContent | **DEPRECATED** - Replace with Content |
+| TextVariants | **DEPRECATED** |
+| Flex | No significant changes |
+| FlexItem | No significant changes |
+| DataList | Requires `aria-label` |
+| DataListItem | Requires `id` prop |
+| DataListItemRow | No significant changes |
+| DataListItemCells | No significant changes |
+| DataListCell | No significant changes |
+| Checkbox | onChange signature changed |
+| Label | Color options updated |
+| Form | No significant changes |
+| FormGroup | Requires `fieldId` prop |
+| TextInput | onChange signature changed |
+| ActionGroup | No significant changes |
+
+#### src/components/todos/TodoList.tsx
+| Component | Migration Notes |
+|-----------|-----------------|
+| PageSection | `variant` prop may change |
+| Button | Icon children -> `icon` prop |
+| Text | **DEPRECATED** - Replace with Content |
+| TextContent | **DEPRECATED** |
+| TextVariants | **DEPRECATED** |
+| Flex | No significant changes |
+| FlexItem | No significant changes |
+| Dropdown | toggle pattern may change |
+| MenuToggle | SplitButtonOptions removed |
+| DropdownList | No significant changes |
+| DropdownItem | No significant changes |
+| Switch | No significant changes |
+| Checkbox | onChange signature changed |
+| Label | Color options updated |
+| EmptyState | **MAJOR**: titleText required, icon prop, no more EmptyStateHeader/EmptyStateIcon |
+| EmptyStateBody | No significant changes |
+
+#### src/components/todos/TodoModal.tsx
+| Component | Migration Notes |
+|-----------|-----------------|
+| Modal | Structure changed: ModalHeader, ModalBody, ModalFooter |
+| Button | Icon children -> `icon` prop |
+| Text | **DEPRECATED** - Replace with Content |
+| TextContent | **DEPRECATED** |
+| TextVariants | **DEPRECATED** |
+| Form | No significant changes |
+| FormGroup | Requires `fieldId` prop |
+| TextInput | onChange signature changed |
+| TextArea | onChange signature changed, requires aria-label/id |
+| DatePicker | onChange signature changed |
+| Tile | **DEPRECATED** - Replace with Card + selectableActions |
+| Flex | No significant changes |
+| FlexItem | No significant changes |
+| FormHelperText | No significant changes |
+| HelperText | No significant changes |
+| HelperTextItem | No significant changes |
+| ActionGroup | No significant changes |
+
+#### src/components/todos/DeleteConfirmationModal.tsx
+| Component | Migration Notes |
+|-----------|-----------------|
+| Modal | Structure changed: ModalHeader, ModalBody, ModalFooter |
+| Button | variant="danger" - no changes expected |
+| Text | **DEPRECATED** - Replace with Content |
+| TextContent | **DEPRECATED** |
+| TextVariants | **DEPRECATED** |
+
+### @patternfly/react-table Components
+
+#### src/components/todos/TodoList.tsx
+| Component | Migration Notes |
+|-----------|-----------------|
+| Table | No significant changes |
+| Thead | No significant changes |
+| Tbody | No significant changes |
+| Tr | No significant changes |
+| Th | sort prop structure may change |
+| Td | No significant changes |
+
+### @patternfly/react-icons
+
+#### src/components/todos/TodoList.tsx
+| Icon | Migration Notes |
+|------|-----------------|
+| EditIcon | No changes |
+| TrashIcon | No changes |
+| TimesIcon | No changes |
+
+#### src/components/dashboard/Dashboard.tsx
+| Icon | Migration Notes |
+|------|-----------------|
+| PlusCircleIcon | No changes |
+
+---
+
+## CSS Variable Inventory
+
+### Files with `--pf-v5-*` CSS Variables
+
+#### src/App.scss (3 references)
+- `--pf-v5-global--BackgroundColor--100` (x2)
+- `--pf-v5-global--spacer--sm`
+
+#### src/index.css (4 references)
+- `--pf-v5-global--FontFamily--text`
+- `--pf-v5-global--FontSize--md`
+- `--pf-v5-global--Color--100`
+- `--pf-v5-global--BackgroundColor--100`
+
+#### src/components/layout/AppNav.scss (6 references)
+- `--pf-v5-global--BackgroundColor--dark-100`
+- `--pf-v5-global--BorderWidth--sm`
+- `--pf-v5-global--BorderColor--100`
+- `--pf-v5-global--Color--light-100`
+- `--pf-v5-global--FontSize--xl`
+- `--pf-v5-global--FontWeight--bold`
+- `--pf-v5-global--FontSize--lg`
+
+#### src/components/dashboard/Dashboard.scss (12 references)
+- `--pf-v5-global--spacer--md`
+- `--pf-v5-global--BorderWidth--sm`
+- `--pf-v5-global--BorderColor--100`
+- `--pf-v5-global--FontSize--4xl`
+- `--pf-v5-global--FontWeight--bold`
+- `--pf-v5-global--spacer--lg`
+- `--pf-v5-global--BorderWidth--lg`
+- `--pf-v5-global--danger-color--100`
+- `--pf-v5-global--spacer--sm`
+
+#### src/components/dashboard/Dashboard.tsx (5 inline style references)
+- `--pf-v5-global--FontSize--4xl` (x3)
+- `--pf-v5-global--danger-color--100`
+- `--pf-v5-global--success-color--100`
+- `--pf-v5-global--spacer--md`
+
+#### src/components/todos/TodoList.scss (10 references)
+- `--pf-v5-global--spacer--md`
+- `--pf-v5-global--BackgroundColor--light-100`
+- `--pf-v5-global--BorderWidth--sm`
+- `--pf-v5-global--BorderColor--100`
+- `--pf-v5-global--breakpoint--md`
+- `--pf-v5-global--spacer--sm`
+- `--pf-v5-global--BorderWidth--lg`
+- `--pf-v5-global--danger-color--100`
+
+#### src/components/todos/TodoList.tsx (1 inline style reference)
+- `--pf-v5-global--spacer--sm`
+
+#### src/components/todos/TodoModal.scss (7 references)
+- `--pf-v5-global--spacer--md`
+- `--pf-v5-global--BorderWidth--sm`
+- `--pf-v5-global--BorderColor--100`
+- `--pf-v5-global--active-color--100`
+
+#### src/components/todos/TodoModal.tsx (1 inline style reference)
+- `--pf-v5-global--BorderWidth--sm`
+
+#### src/components/todos/DeleteConfirmationModal.scss (6 references)
+- `--pf-v5-global--spacer--md`
+- `--pf-v5-global--BorderWidth--sm`
+- `--pf-v5-global--BorderColor--100`
+- `--pf-v5-global--spacer--sm`
+
+#### src/utils/colorUtils.ts (6 references)
+- `--pf-v5-global--danger-color--100`
+- `--pf-v5-global--warning-color--100`
+- `--pf-v5-global--info-color--100`
+- `--pf-v5-global--success-color--100`
+- `--pf-v5-global--purple--100`
+- `--pf-v5-global--Color--200`
+
+---
+
+## CSS Class Inventory
+
+### Files with `pf-v5-*` CSS Classes
+
+#### src/App.scss
+- `.pf-v5-c-page` (component class)
+
+#### src/components/todos/TodoList.tsx (inline className)
+- `pf-v5-u-p-md` (utility: padding medium)
+- `pf-v5-u-mr-xs` (utility: margin-right extra small)
+
+#### src/components/todos/TodoList.scss
+- `.pf-v5-c-flex` (component class)
+
+#### src/components/todos/TodoModal.scss
+- `.pf-v5-c-tile` (component class - will be removed when Tile replaced)
+
+---
+
+## Migration Priority Summary
+
+### High Priority (Breaking Changes)
+1. **Masthead restructuring** - AppNav.tsx
+2. **EmptyState API changes** - TodoList.tsx
+3. **Tile → Card replacement** - TodoModal.tsx
+4. **Text/TextContent deprecation** - All 5 component files
+
+### Medium Priority (API Changes)
+1. **onChange signature updates** - TextInput, TextArea, Checkbox, DatePicker
+2. **Modal structure changes** - TodoModal.tsx, DeleteConfirmationModal.tsx
+3. **Button icon prop** - Multiple files
+
+### Lower Priority (CSS Updates)
+1. **CSS Variables** - 55+ references across 10 files
+2. **CSS Classes** - 5 references across 4 files
