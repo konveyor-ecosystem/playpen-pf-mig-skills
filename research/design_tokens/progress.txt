@@ -1,0 +1,27 @@
+# Ralph Progress Log
+Started: Wed Jan 28 02:30:10 PM EST 2026
+---
+
+## Codebase Patterns
+- Research output files go in `research/` subdirectory with numbered prefixes (01_, 02_, etc.)
+- This is a documentation-only repository; no type checks or linting configured
+- Markdown is the primary output format for research findings
+---
+
+## 2026-01-28 - US-001
+- **What was implemented**: Foundational research on CSS Design Tokens and PatternFly's implementation
+- **Files changed**:
+  - Created `research/01_design_tokens_fundamentals.md`
+- **Content covered**:
+  - W3C Design Tokens specification (stable version 2025.10)
+  - PatternFly 6's three-layer token system (Palette → Base → Semantic)
+  - Token naming conventions (`--pf-t--[scope]--[component]--[property]--[concept]--[variant]--[state]`)
+  - V5 → V6 CSS variable transformations with examples
+  - React token format changes (`global_FontSize_lg` → `t_global_font_size_lg`)
+- **Learnings for future iterations:**
+  - PatternFly explicitly states many tokens have "no 1:1 match" - this is a core migration challenge
+  - Semantic tokens (top layer) are recommended for application code
+  - Three codemods exist for token migration: `tokens-update`, `css-vars-updater`, `class-name-updater`
+  - "Hot pink" fallback is used by codemods for unmatchable tokens
+  - Key documentation sources: patternfly.org/tokens/about-tokens/, patternfly.org/get-started/upgrade
+---
