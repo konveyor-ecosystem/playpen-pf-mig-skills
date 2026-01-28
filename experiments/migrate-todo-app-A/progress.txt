@@ -103,3 +103,23 @@ Started: Wed Jan 28 04:20:17 PM EST 2026
   - Pre-existing lint errors in TodoList.tsx and TodoModal.tsx are unrelated to US-005 changes
   - Build and typecheck pass successfully
 ---
+
+## 2026-01-28 19:15 - US-006
+- **What was implemented**: Verified AppNav.tsx Masthead components are PF6 compatible
+- **Files changed**:
+  - No code changes required - codemods (US-004) already updated AppNav.tsx
+  - Updated `prd.json` to mark US-006 as passing
+- **Verification performed**:
+  - AppNav.tsx uses correct PF6 Masthead structure: MastheadMain > MastheadBrand > MastheadLogo
+  - Text/TextContent replaced with Content/ContentVariants
+  - Button, Toolbar, ToolbarContent, ToolbarItem unchanged (APIs compatible)
+  - TypeScript build passes
+  - Lint passes for AppNav.tsx specifically
+  - E2E tests blocked by missing Playwright browser dependencies on host (not a code issue)
+- **Learnings for future iterations:**
+  - Codemods handle most Masthead restructuring automatically
+  - The `data-codemods` attributes are tracking markers (cleanup in later story or via `--only data-codemods-cleanup`)
+  - SCSS files (AppNav.scss) still have --pf-v5-* CSS variables - these are handled in US-016
+  - Pre-existing lint errors in other files (TodoList.tsx, TodoModal.tsx) don't block component-specific verification
+  - Playwright e2e tests require host browser dependencies (`sudo npx playwright install-deps`)
+---

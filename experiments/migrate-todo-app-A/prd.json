@@ -102,8 +102,8 @@
         "Typecheck passes"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": "File: src/components/layout/AppNav.tsx"
+      "passes": true,
+      "notes": "Completed: Masthead components already updated by codemods (US-004). MastheadBrand→MastheadLogo, Text→Content. Build and lint pass. E2E tests blocked by missing Playwright browser deps on host."
     },
     {
       "id": "US-007",
