@@ -48,3 +48,32 @@ Started: Wed Jan 28 02:30:10 PM EST 2026
   - Custom CSS overrides (direct variable overrides, nested selectors) are NOT detected at all
   - Key source: `shared-codemod-helpers/src/tokenLists/` contains all mapping data
 ---
+
+## 2026-01-28 - US-003
+- **What was implemented**: Comprehensive gap identification and categorization
+- **Files changed**:
+  - Created `research/03_migration_gaps_analysis.md`
+  - Updated `prd.json` to mark US-003 as complete
+- **Content covered**:
+  - Six primary gap categories identified:
+    1. Non-1:1 Token Mappings (removed, consolidated, split, semantic changes)
+    2. Color Token Selection (all ~150+ color tokens require human judgment)
+    3. Component-Specific Tokens (~3000+ with no v6 equivalents)
+    4. Custom CSS Override Patterns (direct variable, nested selectors, media queries)
+    5. Structural Component Changes (deprecated components requiring refactoring)
+    6. Context-Dependent Decisions (same v5 token → different v6 tokens based on usage)
+  - Each gap category includes concrete code examples with:
+    - V5 pattern showing original code
+    - Explanation of why pf-codemods doesn't handle it
+    - What developer must decide
+    - V6 resolution options
+  - Prioritization framework by frequency, difficulty, and automation potential
+  - Summary of tooling opportunities (detection, cataloging, suggestion, validation, guidance)
+- **Learnings for future iterations:**
+  - Seven tokens are explicitly marked "SKIP" with no replacement: BoxShadow_inset, arrow_width, font_path, fonticon_path, target_size_MinHeight/MinWidth
+  - pf-codemods handles 70-80% of migration; remaining 20-30% requires human judgment
+  - Context is crucial: same v5 token may need different v6 tokens (e.g., text vs icon vs background)
+  - Breakpoints changed from px to rem (divide by 16)
+  - Deprecated components: Chip→Label, Tile→Card, ApplicationLauncher→Menu, PageHeader→Masthead
+  - Gap frequency order: Color tokens (very high) > Component tokens (high) > Custom overrides (high) > Context-dependent (medium) > Removed tokens (low) > Structural changes (low)
+---
