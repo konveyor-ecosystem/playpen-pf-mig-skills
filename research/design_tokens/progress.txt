@@ -1,0 +1,188 @@
+# Ralph Progress Log
+Started: Wed Jan 28 02:30:10 PM EST 2026
+---
+
+## Codebase Patterns
+- Research output files go in `research/` subdirectory with numbered prefixes (01_, 02_, etc.)
+- This is a documentation-only repository; no type checks or linting configured
+- Markdown is the primary output format for research findings
+---
+
+## 2026-01-28 - US-001
+- **What was implemented**: Foundational research on CSS Design Tokens and PatternFly's implementation
+- **Files changed**:
+  - Created `research/01_design_tokens_fundamentals.md`
+- **Content covered**:
+  - W3C Design Tokens specification (stable version 2025.10)
+  - PatternFly 6's three-layer token system (Palette → Base → Semantic)
+  - Token naming conventions (`--pf-t--[scope]--[component]--[property]--[concept]--[variant]--[state]`)
+  - V5 → V6 CSS variable transformations with examples
+  - React token format changes (`global_FontSize_lg` → `t_global_font_size_lg`)
+- **Learnings for future iterations:**
+  - PatternFly explicitly states many tokens have "no 1:1 match" - this is a core migration challenge
+  - Semantic tokens (top layer) are recommended for application code
+  - Three codemods exist for token migration: `tokens-update`, `css-vars-updater`, `class-name-updater`
+  - "Hot pink" fallback is used by codemods for unmatchable tokens
+  - Key documentation sources: patternfly.org/tokens/about-tokens/, patternfly.org/get-started/upgrade
+---
+
+## 2026-01-28 - US-002
+- **What was implemented**: Deep analysis of pf-codemods tooling suite
+- **Files changed**:
+  - Created `research/02_pf_codemods_analysis.md`
+  - Updated `prd.json` to mark US-002 as complete
+- **Content covered**:
+  - Repository structure analysis (4 packages: eslint-plugin-pf-codemods, css-vars-updater, class-name-updater, shared-codemod-helpers)
+  - 106 v6 migration rules cataloged
+  - Detection patterns: ESLint AST for React tokens, regex for CSS vars/classes
+  - Three main token codemods analyzed: tokens-update, tokensPrefixWithT, css-vars-updater
+  - Hot pink fallback mechanism documented (`t_temp_dev_tbd` / `--pf-t--temp--dev--tbd`)
+  - Token mapping data structures: ~50 non-color mappings, ~150 color tokens, ~3000 deprecated component tokens
+  - Six categories of manual intervention scenarios identified
+- **Learnings for future iterations:**
+  - pf-codemods explicitly states "not designed to fix all build errors" - sets expectations
+  - Color tokens get hot pink placeholder with comment preserving original; requires human semantic judgment
+  - Component-specific tokens (~3000) have NO automated mapping - biggest gap
+  - CSS detection uses negative lookbehind `(?<!:)` to avoid matching comment annotations
+  - Tokens marked "SKIP" in mapping = removed functionality, no replacement exists
+  - Custom CSS overrides (direct variable overrides, nested selectors) are NOT detected at all
+  - Key source: `shared-codemod-helpers/src/tokenLists/` contains all mapping data
+---
+
+## 2026-01-28 - US-003
+- **What was implemented**: Comprehensive gap identification and categorization
+- **Files changed**:
+  - Created `research/03_migration_gaps_analysis.md`
+  - Updated `prd.json` to mark US-003 as complete
+- **Content covered**:
+  - Six primary gap categories identified:
+    1. Non-1:1 Token Mappings (removed, consolidated, split, semantic changes)
+    2. Color Token Selection (all ~150+ color tokens require human judgment)
+    3. Component-Specific Tokens (~3000+ with no v6 equivalents)
+    4. Custom CSS Override Patterns (direct variable, nested selectors, media queries)
+    5. Structural Component Changes (deprecated components requiring refactoring)
+    6. Context-Dependent Decisions (same v5 token → different v6 tokens based on usage)
+  - Each gap category includes concrete code examples with:
+    - V5 pattern showing original code
+    - Explanation of why pf-codemods doesn't handle it
+    - What developer must decide
+    - V6 resolution options
+  - Prioritization framework by frequency, difficulty, and automation potential
+  - Summary of tooling opportunities (detection, cataloging, suggestion, validation, guidance)
+- **Learnings for future iterations:**
+  - Seven tokens are explicitly marked "SKIP" with no replacement: BoxShadow_inset, arrow_width, font_path, fonticon_path, target_size_MinHeight/MinWidth
+  - pf-codemods handles 70-80% of migration; remaining 20-30% requires human judgment
+  - Context is crucial: same v5 token may need different v6 tokens (e.g., text vs icon vs background)
+  - Breakpoints changed from px to rem (divide by 16)
+  - Deprecated components: Chip→Label, Tile→Card, ApplicationLauncher→Menu, PageHeader→Masthead
+  - Gap frequency order: Color tokens (very high) > Component tokens (high) > Custom overrides (high) > Context-dependent (medium) > Removed tokens (low) > Structural changes (low)
+---
+
+## 2026-01-28 - US-004
+- **What was implemented**: Technical implementation details for detection and suggestion tooling
+- **Files changed**:
+  - Created `research/04_technical_implementation_details.md`
+  - Updated `prd.json` to mark US-004 as complete
+- **Content covered**:
+  - Token mapping documentation:
+    - 64 global non-color token mappings with V5→V6 table
+    - 168 color tokens cataloged (require human judgment)
+    - 2,680 component-specific deprecated tokens enumerated
+    - 7 tokens marked "SKIP" (removed without replacement)
+    - 600+ new V6 tokens in `tokensToPrefixWithT`
+  - Detection patterns:
+    - Primary CSS regex: `/(?<!:)(--pf-v5-[\w-]+)/g`
+    - File extension filter: `\.(s?css|less|md)$`
+    - AST node types: ImportSpecifier, ImportDefaultSpecifier, Identifier, Literal
+    - Custom override detection patterns (variable overrides, nested selectors, media queries)
+    - Directional property detection and transformation
+  - Replacement heuristics:
+    - Property context mapping (color→text, background-color→background, etc.)
+    - Semantic intent keyword extraction (primary→brand, success→status--success, etc.)
+    - Numeric suffix to semantic translation (100→primary, 200→secondary, etc.)
+    - Context-based suggestion matrix for split tokens
+    - Confidence scoring model (0-100% with weighted factors)
+  - Implementation architecture:
+    - Detection pipeline design (File Discovery → Pattern Matching → Token Extraction)
+    - Suggestion pipeline design (Token Analysis → Mapping Lookup → Confidence Scoring)
+    - TypeScript data structures for TokenDetection and ReplacementSuggestion
+  - Reference data sources (7 token list files totaling ~550KB)
+- **Learnings for future iterations:**
+  - Token counts refined: 64 non-color mappings (not ~50), 168 color tokens (not ~150), 2,680 component tokens (not ~3000)
+  - Confidence scoring should use weighted factors: direct mapping (+40%), single context (+30%), semantic match (+20%), numeric pattern (+10%)
+  - Some "mapped" tokens have different values in V6 (e.g., `FontSize_2xl`: 1.5rem→1.375rem) - flag for visual verification
+  - pf-codemods token list files in `shared-codemod-helpers/src/tokenLists/` are authoritative source
+  - Negative lookbehind in regex `(?<!:)` is critical to avoid matching codemod comment annotations
+---
+
+## 2026-01-28 - US-005
+- **What was implemented**: Migration workflow analysis with intervention points for tooling
+- **Files changed**:
+  - Created `research/05_migration_workflow_analysis.md`
+  - Updated `prd.json` to mark US-005 as complete
+- **Content covered**:
+  - Complete 4-stage migration workflow map:
+    1. Discovery (find v5 tokens, ~20% effort)
+    2. Analysis (understand context, ~15% effort)
+    3. Resolution (select replacements, ~40% effort)
+    4. Validation (verify correctness, ~10% effort)
+  - Official PatternFly migration sequence from documentation
+  - Scenario categorization by frequency:
+    - Very High: Color tokens, class names, imports
+    - High: Component tokens, custom overrides
+    - Medium: Deprecated components, breakpoints
+    - Low: Removed tokens, major refactoring
+  - Scenario categorization by difficulty:
+    - Quick Wins (<1 min): 60-70% of changes
+    - Moderate (1-5 min): 20-25% of changes
+    - Complex (5-30 min): 8-12% of changes
+    - Major Refactoring (30+ min): 2-5% of changes
+  - 8 specific pain points identified with:
+    - Where developers get stuck
+    - What information is missing
+  - 6 tooling intervention points with complexity/impact matrix
+  - Optimized developer workflow recommendation
+  - Decision framework for token selection (property → intent → state)
+- **Learnings for future iterations:**
+  - Resolution stage takes 40% of effort - highest value intervention point
+  - Custom overrides are "invisible" to codemods - detection is a gap
+  - Context-aware suggestions need property + semantic intent + state
+  - ~2,680 component tokens are a "dead end" with no v6 mappings - requires researching v6 API
+  - Breakpoint conversion is a quick win: px → rem (divide by 16)
+  - Hot pink placeholders preserve original token in comments for reference
+  - PatternFly recommends disabling all custom CSS overrides first, then adding back essential ones
+  - Visual regression detection is a validation pain point - value changes (e.g., FontSize_2xl) may be intentional
+---
+
+## 2026-01-28 - US-006
+- **What was implemented**: Synthesis and recommendations consolidating all research phases
+- **Files changed**:
+  - Created `research/00_executive_summary.md`
+  - Created `research/06_synthesis_and_recommendations.md`
+  - Updated `prd.json` to mark US-006 as complete
+- **Content covered**:
+  - Consolidated gap analysis with coverage percentages (70% automated, 20% semi-automatable, 10% manual)
+  - Multi-factor priority matrix scoring gaps by frequency (40%), difficulty (35%), automation potential (25%)
+  - Priority ranking:
+    1. Color token selection (score: 7.70)
+    2. Context-dependent decisions (score: 7.35)
+    3. Custom CSS override detection (score: 7.10)
+    4. Component-specific tokens (score: 6.80)
+  - Tool requirements defined:
+    - Must-have: Comprehensive detection, context-aware suggestions, progress tracking
+    - Nice-to-have: Interactive replacement, visual comparison, component guidance, batch mode
+    - Out-of-scope: React refactoring, structural migration, visual regression testing
+  - Implementation recommendations:
+    - 3-phase development (Detection → Suggestion → Interactive)
+    - Technology stack (TypeScript, PostCSS, Commander.js)
+    - Architecture diagram for detection/suggestion pipelines
+  - 8 key findings with strategic recommendations
+  - Executive summary for rapid team onboarding
+- **Learnings for future iterations:**
+  - Semi-automatable tier (color tokens, context detection, override discovery) offers best ROI
+  - Complement pf-codemods rather than compete; use its data as source of truth
+  - Detection is valuable even without suggestions - provides visibility
+  - Resolution stage takes 40% of effort - highest value intervention point
+  - Target >80% accuracy for top suggestion to be useful
+  - Phased development reduces risk; detection MVP provides immediate value
+---

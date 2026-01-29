@@ -1,0 +1,106 @@
+{
+  "project": "PatternFly Design Token Migration Research",
+  "branchName": "ralph/css-design-token-research",
+  "description": "Research initiative to investigate CSS Design Token migration challenges from PatternFly 5 to 6, identifying gaps not covered by pf-codemods",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Phase 1 - Foundational Understanding",
+      "description": "As a tool builder, I need foundational knowledge of CSS Design Tokens and PatternFly's implementation so that I understand the problem domain before analyzing gaps.",
+      "acceptanceCriteria": [
+        "Research CSS Design Tokens as a general concept (what they are, W3C spec, implementation patterns)",
+        "Document PatternFly 6's three-layer token system: Palette → Base → Semantic",
+        "Document naming conventions (--pf-t--[scope]--[component]--[property]--[concept]--[variant]--[state])",
+        "Document v5 → v6 naming transformations with examples",
+        "Document React token format changes (global_FontSize_lg → t_global_font_size_lg)",
+        "Output saved to research/01_design_tokens_fundamentals.md",
+        "Checkpoint passed: Can explain design tokens, PatternFly's token layers, and naming changes to an unfamiliar developer"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Key resources: https://www.patternfly.org/get-started/upgrade, https://www.patternfly.org/tokens/about-tokens/"
+    },
+    {
+      "id": "US-002",
+      "title": "Phase 2 - Existing Tooling Analysis",
+      "description": "As a tool builder, I need to understand what pf-codemods handles so that I can identify where complementary tooling is needed.",
+      "acceptanceCriteria": [
+        "Analyze pf-codemods v6 rules repository structure",
+        "Catalog all CSS/token-related codemods with their transformation logic",
+        "Document detection patterns used (regex, AST, etc.)",
+        "Deep-dive on class-name-updater - what it catches and misses",
+        "Deep-dive on tokens-update - React token transformations",
+        "Deep-dive on css-vars-updater - CSS variable updates in non-React files",
+        "Document 'hot pink' fallback behavior for unmatchable tokens",
+        "List scenarios explicitly marked as requiring manual intervention",
+        "Output saved to research/02_pf_codemods_analysis.md",
+        "Checkpoint passed: Can articulate exactly what pf-codemods handles and where it explicitly stops"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Key resource: https://github.com/patternfly/pf-codemods/tree/main/packages/eslint-plugin-pf-codemods/src/rules/v6"
+    },
+    {
+      "id": "US-003",
+      "title": "Phase 3 - Gap Identification",
+      "description": "As a tool builder, I need a categorized inventory of migration gaps so that I can prioritize tooling development efforts.",
+      "acceptanceCriteria": [
+        "Research scenarios where 1:1 token mappings don't exist (removed, consolidated, split, semantic changes)",
+        "Categorize custom CSS override patterns (direct variable overrides, class-based overrides, nested selectors, media queries)",
+        "Document decision points requiring human judgment (choosing tokens, deciding if override needed, handling removed functionality)",
+        "Each gap category includes concrete code examples showing v5 pattern, why pf-codemods doesn't handle it, what developer must decide, and v6 resolution options",
+        "Output saved to research/03_migration_gaps_analysis.md",
+        "Checkpoint passed: Have a categorized inventory of gap types with concrete examples of each"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed with six gap categories, concrete code examples, and prioritization framework"
+    },
+    {
+      "id": "US-004",
+      "title": "Phase 4 - Technical Deep Dive",
+      "description": "As a tool builder, I need implementation-ready technical details so that I can begin prototyping detection and suggestion logic.",
+      "acceptanceCriteria": [
+        "Create mapping documentation: V5 → V6 tokens (where mappings exist), V5 with no direct mapping, new V6 tokens",
+        "Document detection patterns: regex for v5 CSS variables, file types/locations for overrides, AST considerations",
+        "Identify heuristics for suggesting replacements: semantic similarity, context-based suggestions, confidence scoring",
+        "Output saved to research/04_technical_implementation_details.md",
+        "Checkpoint passed: Have enough technical detail to begin prototyping detection and suggestion logic"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Completed with 64 non-color mappings, 168 color tokens, 2680 component tokens cataloged; detection regex patterns; heuristics for property context, semantic intent, and confidence scoring"
+    },
+    {
+      "id": "US-005",
+      "title": "Phase 5 - Migration Workflow Analysis",
+      "description": "As a tool builder, I need to understand the developer migration workflow so that tooling can intervene at the right points.",
+      "acceptanceCriteria": [
+        "Map the complete migration workflow: Discovery, Analysis, Resolution, Validation stages",
+        "Categorize scenarios by frequency and difficulty: quick wins, moderate effort, complex cases",
+        "Document pain points at each workflow stage: missing information, hardest decisions, where developers get stuck",
+        "Output saved to research/05_migration_workflow_analysis.md",
+        "Checkpoint passed: Can describe end-to-end technical journey with identified intervention points"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Completed with 4-stage workflow map, frequency/difficulty matrices, 8 identified pain points with where developers get stuck and missing information, 6 intervention points for tooling, optimized developer workflow, and decision framework for token selection"
+    },
+    {
+      "id": "US-006",
+      "title": "Phase 6 - Synthesis and Recommendations",
+      "description": "As a tool builder, I need consolidated findings and prioritized recommendations so that I can make informed decisions about tooling development.",
+      "acceptanceCriteria": [
+        "Prioritize gap categories by frequency, difficulty, and automation potential",
+        "Define tool requirements: must-have capabilities, nice-to-have features, out-of-scope items",
+        "Create executive summary for rapid onboarding (1 page)",
+        "Output saved to research/06_synthesis_and_recommendations.md",
+        "Output saved to research/00_executive_summary.md",
+        "Checkpoint passed: New team member can read executive summary and understand problem space"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Completed with multi-factor priority matrix (frequency, difficulty, automation potential), tool requirements (3 must-have, 4 nice-to-have, 6 out-of-scope), executive summary for rapid onboarding, phased development approach, and 8 key findings with strategic recommendations"
+    }
+  ]
+}
