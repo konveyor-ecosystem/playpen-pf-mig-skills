@@ -249,9 +249,8 @@ Examples:
 
 Workflow:
   1. Run 'analyze' to understand all issues and their scope
-  2. Create fix plan based on file_count (files with most issues)
-  3. Use 'file' command to drill into specific files when ready to fix
-  4. Apply fixes following rule recommendations
+  2. Use 'file' command to drill into specific files when ready to fix
+  3. Apply fixes following rule recommendations
         """
     )
 
