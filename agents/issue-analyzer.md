@@ -1,8 +1,18 @@
 ---
 name: issue-analyzer
 description: Analyze persistent migration issues appearing across multiple analysis runs. Use when issues remain unfixed after 3+ iterations.
-tools: Bash
-model: sonnet
+
+# For Gemini CLI, uncomment the tools section below:
+# tools:
+#   - run_shell_command
+#   - list_directory
+#   - read_file
+#   - write_file
+#   - search_file_content
+#   - replace
+#   - glob
+# For Claude Code, tools may be inherited from global settings
+# tools: Bash, Read, Write, Edit, Grep, Glob, Task
 ---
 
 # Issue Analyzer

@@ -1,8 +1,18 @@
 ---
 name: project-explorer
 description: Discover project structure, build system, test configurations, and available commands. Use at the start of migration to understand the codebase.
-tools: Read, Glob, Grep, Bash
-model: haiku
+
+# For Gemini CLI, uncomment the tools section below:
+# tools:
+#   - run_shell_command
+#   - list_directory
+#   - read_file
+#   - write_file
+#   - search_file_content
+#   - replace
+#   - glob
+# For Claude Code, tools may be inherited from global settings
+# tools: Bash, Read, Write, Edit, Grep, Glob, Task
 ---
 
 # Project Explorer
@@ -75,9 +85,6 @@ Provide a concise summary (under 30 lines) in this format:
 - Languages: [list]
 - Main directories: [list]
 - Architecture: [brief description]
-
-**Recommendations:**
-[Any relevant notes about the project setup]
 ```
 
 Focus on actionable information. If something is not found, state "Not found" rather than guessing.

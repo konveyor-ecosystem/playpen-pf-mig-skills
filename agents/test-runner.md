@@ -1,8 +1,18 @@
 ---
 name: test-runner
 description: Execute test suites and report results. Use proactively after code changes during migration to validate fixes.
-tools: Bash
-model: inherit
+
+# For Gemini CLI, uncomment the tools section below:
+# tools:
+#   - run_shell_command
+#   - list_directory
+#   - read_file
+#   - write_file
+#   - search_file_content
+#   - replace
+#   - glob
+# For Claude Code, tools may be inherited from global settings
+# tools: Bash, Read, Write, Edit, Grep, Glob, Task
 ---
 
 # Test Runner
