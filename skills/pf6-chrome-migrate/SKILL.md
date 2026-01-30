@@ -129,6 +129,8 @@ Continue the compare-fix loop until:
 - All pages visually match the baseline (SUCCESS), OR
 - You've attempted fixes but differences persist after 5 iterations (ESCALATE)
 
+> [!important] Please make sure that the level of accessibility and usability is maintained or improved during the migration process. For example, ensure that there are no light fonts on light backgrounds or low contrast elements that could hinder readability, unless present in the original design.
+
 ---
 
 ## Step 6: Final Verification
