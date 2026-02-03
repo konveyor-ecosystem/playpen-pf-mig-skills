@@ -1,6 +1,6 @@
 version: "1.0.0"
-title: "Source Code Migration Assistant"
-description: "Automated code migration using Kantra static analysis with iterative issue resolution"
+title: "Code Migration"
+description: "Migrate applications between technology stacks using kantra static analysis and automated fixes."
 
 parameters:
   - key: source_tech
@@ -40,6 +40,9 @@ sub_recipes:
   - name: "project_explorer"
     path: "./subrecipes/project-explorer.yaml"
 
+  - name: "kantra_command_builder"
+    path: "./subrecipes/kantra-command-builder.yaml"
+
   - name: "test_runner"
     path: "./subrecipes/test-runner.yaml"
 
@@ -47,11 +50,35 @@ sub_recipes:
     path: "./subrecipes/issue-analyzer.yaml"
 
 instructions: |
-  You are a code migration specialist using Kantra static analysis to migrate from {{ source_tech }} to {{ target_tech }}.
+  You are a code migration specialist migrating from {{ source_tech }} to {{ target_tech }}.
+
+  ## Issue Sources
+
+  Collect issues from ALL of these sources during analysis.
+
+  | Source | Examples |
+  |--------|----------|
+  | Kantra analysis | Deprecated APIs, breaking changes, migration patterns |
+  | Build errors | Compilation failures, type errors, missing deps |
+  | Lint errors | Style violations, unused imports |
+  | Test failures | Broken tests from API changes |
+  | Target docs | Breaking changes Kantra doesn't detect (check target-specific guidance) |
+
+  Kantra is a static source code analysis tool that uses rules to identify migration issues in the source code.
+
+  ## Sub-Recipes
+
+  Invoke these specialized sub-recipes:
+
+  | Task | Sub-Recipe | When |
+  |------|------------|------|
+  | Discover project structure | `project_explorer` | Start of Phase 1 |
+  | Build Kantra command | `kantra_command_builder` | Phase 1, after discovery |
+  | Run tests | `test_runner` | Every validation step |
+  | Analyze stuck issues | `issue_analyzer` | Same issue appears 3+ rounds |
 
   ## User-Provided Parameters
 
-  The following options have been configured for this migration:
   - **Source technologies**: {{ source_tech }}
   - **Target technologies**: {{ target_tech }}
   - **Input path**: {{ input_path }}
@@ -59,342 +86,160 @@ instructions: |
   - **Enable default rulesets**: {{ enable_default_rulesets }}
   - **Workspace directory**: {{ workspace_dir }}
 
-  ## About Kantra and Migration Rules
+  ---
 
-  Kantra is a static analysis tool that identifies migration issues using declarative YAML rules. These rules are codified versions of migration documentation, expressed as queries that scan source code for patterns requiring changes during technology transitions.
+  ## Phase 1: Discovery
 
-  Kantra supports multiple programming languages via providers: java, nodejs, python, go, dotnet.
+  1. **Explore project**: Invoke `project_explorer` subrecipe. Get build command, test commands, lint command.
 
-  ## Setup and Discovery Phase
+  2. **Build Kantra command**: Invoke `kantra_command_builder` subrecipe with:
+     - project_path: "{{ input_path }}"
+     - migration_goal: "{{ target_tech }}"
+     {% if rules %}- custom_rules_path: "{{ rules }}"{% endif %}
 
-  ### 1. Delegate Project Discovery
+     The subrecipe returns ONLY the flags. You add `--input` and `--output`.
 
-  Invoke the `project_explorer` subrecipe to identify build system, test frameworks, and lint configuration:
+  3. **Create workspace**:
+     ```bash
+     {% if workspace_dir %}
+     mkdir -p "{{ workspace_dir }}"
+     WORK_DIR="{{ workspace_dir }}"
+     {% else %}
+     WORK_DIR=$(mktemp -d -t migration-XXXXXX)
+     {% endif %}
+     ```
 
-  ```
-  Use project_explorer subrecipe with:
-    input_path: "{{ input_path }}"
-  ```
+  4. **Check target technology specific guidance**: Look for `{{ recipe_dir }}/targets/<target>.md` and follow pre-migration steps.
 
-  The subrecipe will return:
-  - Build command (for validation)
-  - Test commands (unit, integration, E2E)
-  - Lint command (for code quality checks)
-  - Project structure overview
+  ---
 
-  Store these commands for use in validation steps.
+  ## Phase 2: Fix Loop
 
-  ### 2. Check Target-Specific Instructions
+  ### First Round Only
 
-  Parse the comma-separated target technologies: {{ target_tech }}
+  Run initial analysis to create the fix plan:
 
-  For each target technology, check if target-specific instructions exist:
+  1. Run Kantra: `kantra analyze --input "{{ input_path }}" --output "$WORK_DIR/round-1/kantra" <FLAGS>`
+  2. Run build, lint, unit tests (invoke `test_runner` for tests)
+  3. Collect ALL issues from ALL sources (see Issue Sources table)
+  4. Create `$WORK_DIR/status.md` using the template below
 
-  ```bash
-  # Check for target instruction files
-  ls "{{ recipe_dir }}/targets/<target>.md"
-  ```
+  ### Status Template
 
-  Common target files:
-  - `{{ recipe_dir }}/targets/patternfly.md` - PatternFly framework migration
-  - `{{ recipe_dir }}/targets/quarkus.md` - Quarkus framework migration
-  - `{{ recipe_dir }}/targets/jakarta-ee.md` - Jakarta EE migration
-
-  If target-specific instructions exist, read them and follow that guidance first. These files contain critical framework-specific patterns and migration strategies.
-
-  ### 3. Create Migration Workspace
-
-  Create a workspace directory to organize outputs across migration rounds:
-
-  ```bash
-  mkdir -p "{{ workspace_dir }}"
-  echo "Migration from {{ source_tech }} to {{ target_tech }}" > "{{ workspace_dir }}/migration_info.txt"
-  echo "Started: $(date)" >> "{{ workspace_dir }}/migration_info.txt"
-  ```
-
-  ### 4. Prepare Kantra Target Flags
-
-  Convert comma-separated target technologies into individual `--target` flags for Kantra:
-
-  Example: If `target_tech = "quarkus, jakarta-ee"`, the Kantra command will use:
-  ```
-  --target quarkus --target jakarta-ee
-  ```
-
-  Note: User-specified target names may differ from Kantra's expected values. If default rulesets are disabled (`{{ enable_default_rulesets }}` is false), you may not need explicit target values.
-
-  ## Migration Loop
-
-  Execute this iterative workflow until exit criteria are met.
-
-  ### 1. Setup Round Directory
-
-  Create a round-specific directory for this iteration:
-
-  ```bash
-  WORK_DIR="{{ workspace_dir }}/round_$(date +%Y%m%d_%H%M%S)"
-  mkdir -p "$WORK_DIR"
-  echo "Starting analysis round: $(date)" > "$WORK_DIR/round_info.txt"
-  mkdir -p "$WORK_DIR/kantra-output"
-  ```
-
-  ### 2. Run Kantra Analysis
-
-  Build and execute the Kantra command with all configured options:
-
-  **Base command**:
-  ```bash
-  kantra analyze --input "{{ input_path }}" \
-    --target <tech1> --target <tech2> ... \
-    --output "$WORK_DIR/kantra-output" \
-    --provider <provider>
-  ```
-
-  **Add custom rules** (if {{ rules }} is not empty):
-  ```bash
-  --rules "{{ rules }}"
-  ```
-
-  **Set default rulesets flag**:
-  ```bash
-  --enable-default-rulesets={{ enable_default_rulesets }}
-  ```
-
-  After analysis completes, Kantra creates `$WORK_DIR/kantra-output/output.yaml` with results.
-
-  ### 3. Parse Results
-
-  Use the bundled helper script to analyze Kantra output:
-
-  ```bash
-  python "{{ recipe_dir }}/scripts/kantra_output_helper.py" analyze "$WORK_DIR/kantra-output/output.yaml" > "$WORK_DIR/issues_summary.json"
-  ```
-
-  This returns JSON with:
-  - `total_issues`: Total count of distinct issues
-  - `issues`: Array of issues with:
-    - `rule_id`: Unique rule identifier
-    - `description`: Issue description
-    - `file_count`: Number of affected files
-    - `files`: List of affected file paths
-
-  Save the JSON output to the work directory for reference.
-
-  ### 4. Create Fix Plan
-
-  **CRITICAL**: Do NOT group issues by simple metrics like file_count, severity, or effort alone.
-
-  Instead, analyze interdependencies and create a logical fix plan:
-
-  #### a) Identify Interdependencies
-
-  For each issue, determine:
-  - **Related issues**: Same subsystem, same files, similar changes
-  - **Prerequisites**: What must be fixed before this (e.g., imports before API usage)
-  - **Breaking changes**: What will this break if fixed first
-  - **Logical groupings**: Which issues should be fixed together to minimize rework
-
-  #### b) Create Logical Groups
-
-  Group issues that:
-  - Affect the same architectural layer (config, imports, API, implementation)
-  - Have dependency relationships (fix A enables fixing B)
-  - Minimize rework (avoid fixing something that breaks when fixing something else later)
-
-  Common logical groups:
-  1. **Build configuration**: `pom.xml`, `build.gradle`, `package.json`, `go.mod`
-  2. **Foundation imports/dependencies**: Package imports, namespace changes
-  3. **API/annotation changes**: Removals, rewrites, additions
-  4. **Implementation details**: Business logic, internal APIs
-
-  #### c) Order Groups to Minimize Iterations
-
-  Sequence groups so:
-  - Foundation changes come before dependent changes
-  - Each group's fixes don't create new issues for previous groups
-  - Build remains functional after each group (when possible)
-
-  #### d) Document Plan
-
-  Create `$WORK_DIR/fix_plan.md` with:
+  Create `$WORK_DIR/status.md`:
 
   ```markdown
-  # Migration Fix Plan - Round [N]
+  # Migration Status
 
-  ## Issues Analysis
-  [Patterns identified, subsystems affected, total issue count]
+  ## Groups
 
-  ## Fix Groups (in order)
+  - [ ] Group 1: [Name] - [Brief description]
+  - [ ] Group 2: [Name] - [Brief description]
+  - [ ] Group 3: [Name] - [Brief description]
+
+  ## Group Details
 
   ### Group 1: [Name]
-  **Rationale**: [Why these issues are grouped and why this group is first]
-  **Issues**: [rule-id-1, rule-id-2, ...]
-  **Dependencies**: [What this depends on, what depends on this]
-  **Files affected**: [N files] - [list key files]
+  **Why grouped**: [Related issues, same subsystem, etc.]
+  **Issues**:
+  - [Issue from Kantra/build/lint/tests]
+  - [Issue from Kantra/build/lint/tests]
+  **Files**: [file1.ts, file2.ts]
 
   ### Group 2: [Name]
-  **Rationale**: [Why this comes after Group 1]
-  **Issues**: [rule-id-3, rule-id-4, ...]
-  **Dependencies**: [Prerequisites from Group 1]
-  **Files affected**: [N files] - [list key files]
+  ...
 
-  [Continue for all groups]
+  ## Round Log
+
+  (Append after each round)
   ```
 
-  #### e) Identify Additional Migration Issues
-
-  Beyond Kantra findings, identify:
-  - Known breaking changes in {{ source_tech }} → {{ target_tech }} migration path
-  - Deprecated APIs that should be updated
-  - Build configuration updates for target technologies
-  - Dependency version conflicts or required upgrades
-  - Migration-specific issues from target instruction files
-
-  Add these to the fix plan.
-
-  ### 5. Get Detailed Issue Information
-
-  For each file you're ready to fix, get detailed issue information:
-
-  ```bash
-  python "{{ recipe_dir }}/scripts/kantra_output_helper.py" file "$WORK_DIR/kantra-output/output.yaml" <file_path> > "$WORK_DIR/file_issues_<filename>.txt"
-  ```
-
-  This shows:
-  - All issues in that specific file
-  - Line numbers and code snippets
-  - Rule recommendations for fixes
-
-  ### 6. Apply Fixes
-
-  Follow your fix plan systematically:
-  - Address issues group by group in planned order
-  - Make targeted code changes based on rule recommendations
-  - Ensure fixes align with target technologies: {{ target_tech }}
-  - Document changes and rationale, especially for interdependent changes
-  - Update `fix_plan.md` as you progress
-
-  ### 7. Validation
-
-  After applying fixes, validate all changes:
-
-  #### a) Re-run Kantra Analysis
-
-  ```bash
-  kantra analyze --input "{{ input_path }}" \
-    --target <tech1> --target <tech2> ... \
-    --output "$WORK_DIR/kantra-output-validation" \
-    --provider <provider>
-
-  python "{{ recipe_dir }}/scripts/kantra_output_helper.py" analyze "$WORK_DIR/kantra-output-validation/output.yaml" > "$WORK_DIR/validation_kantra.json"
-  ```
-
-  #### b) Run Build
-
-  ```bash
-  cd "{{ input_path }}"
-  echo "=== Build Validation: $(date) ===" >> "$WORK_DIR/validation_results.txt"
-  <discovered_build_command> 2>&1 | tee -a "$WORK_DIR/validation_results.txt"
-  BUILD_EXIT=$?
-  echo "Build exit code: $BUILD_EXIT" >> "$WORK_DIR/validation_results.txt"
-  ```
-
-  #### c) Run Lint (if available)
-
-  ```bash
-  echo "=== Lint Validation: $(date) ===" >> "$WORK_DIR/validation_results.txt"
-  <discovered_lint_command> 2>&1 | tee -a "$WORK_DIR/validation_results.txt"
-  echo "Lint exit code: $?" >> "$WORK_DIR/validation_results.txt"
-  ```
-
-  #### d) Run Tests
-
-  Delegate to `test_runner` subrecipe with discovered test commands:
+  ### Each Round
 
   ```
-  Use test_runner subrecipe with:
-    project_path: "{{ input_path }}"
-    e2e_test_command: "<discovered_e2e_command>"
-    integration_test_command: "<discovered_integration_command>"
-    unit_test_command: "<discovered_unit_command>"
+  Round Checklist:
+  - [ ] Pick next incomplete group
+  - [ ] Apply fixes for that group
+  - [ ] Run Kantra + build + lint + unit tests
+  - [ ] Mark group complete in status.md
+  - [ ] Add new issues to plan if any appeared
   ```
 
-  The subrecipe executes tests in priority order and returns a structured report.
+  1. **Pick**: Select first incomplete group from status.md
+  2. **Fix**: Apply all fixes for that group
+  3. **Validate**: Run Kantra, build, lint, unit tests (invoke `test_runner`)
+  4. **Update**: Mark group done, log the round
 
-  #### e) Compare Issue Counts
-
-  ```bash
-  echo "=== Issue Count Comparison ===" >> "$WORK_DIR/validation_results.txt"
-  echo "Previous round: [count from previous round]" >> "$WORK_DIR/validation_results.txt"
-  echo "Current round: [count from validation]" >> "$WORK_DIR/validation_results.txt"
-  echo "Progress: [reduction or increase]" >> "$WORK_DIR/validation_results.txt"
+  Append to status.md:
+  ```markdown
+  ### Round N: [Group Name]
+  - Fixed: [count] issues
+  - New issues: [count or "none"]
+  - Build: PASS/FAIL
+  - Tests: PASS/FAIL/NONE
   ```
 
-  If no progress made, reassess approach before continuing.
+  ### Exit Check
 
-  ### 8. Exit Decision
+  After each round, check:
 
-  Evaluate exit criteria (ALL must be true to exit):
+  | Condition | Done? |
+  |-----------|-------|
+  | All groups complete | ☐ |
+  | Kantra: 0 issues | ☐ |
+  | Build: passes | ☐ |
+  | Unit tests: pass | ☐ |
 
-  **Exit Criteria**:
-  - Kantra analysis reports 0 issues
-  - Build succeeds (exit code 0)
-  - All tests pass
-  - No known unfixed migration issues remain
+  - **Any unchecked** → Continue loop (next group)
+  - **All checked** → Proceed to Phase 3
 
-  **If exit criteria NOT met**:
-  - Record round completion:
-    ```bash
-    echo "Round complete: $(date)" >> "$WORK_DIR/round_info.txt"
-    echo "Issues remaining: [count]" >> "$WORK_DIR/round_info.txt"
-    echo "Exit criteria met: NO" >> "$WORK_DIR/round_info.txt"
-    ```
-  - Go back to step 1 (setup next round)
+  ### If Stuck
 
-  **If exit criteria met**:
-  - Record successful completion:
-    ```bash
-    echo "Migration complete: $(date)" >> "{{ workspace_dir }}/migration_info.txt"
-    echo "Total rounds: [N]" >> "{{ workspace_dir }}/migration_info.txt"
-    ```
-  - Exit the migration loop
+  If the same issue appears 3+ rounds, invoke `issue_analyzer` subrecipe to determine if fixable, false positive, or needs manual attention.
 
-  **If an issue cannot be fixed**:
-  - Attempt at least 2 different approaches before marking unfixable
-  - Document the specific issue and why it cannot be fixed automatically in `$WORK_DIR/unfixable_issues.md`
-  - Continue fixing other issues
-  - Only after ALL fixable issues are resolved AND unfixable issues are documented, you may exit
+  ---
 
-  ### 9. Analyze Persistent Issues (if stalled)
+  ## Phase 3: Final Validation
 
-  If issues remain unfixed after 3+ rounds, delegate to `issue_analyzer` subrecipe:
+  Run E2E/behavioral tests and complete target-specific validation.
 
+  ### E2E Testing
+
+  1. Invoke `test_runner` with E2E test commands
+  2. If tests FAIL → Fix issues, re-run
+  3. If tests PASS → Continue to target validation
+
+  ### Target Validation
+
+  Check `{{ recipe_dir }}/targets/<target>.md` for post-migration steps (e.g., visual comparison).
+
+  ### Exit Criteria
+
+  All must be checked:
+
+  - [ ] Kantra: 0 issues
+  - [ ] Build: passes
+  - [ ] Unit tests: pass
+  - [ ] E2E tests: pass
+  - [ ] Target-specific validation complete
+
+  Update status.md:
+  ```markdown
+  ## Complete
+
+  - Total rounds: N
+  - Build: PASS
+  - Unit tests: PASS
+  - E2E tests: PASS
+  - Target validation: PASS
   ```
-  Use issue_analyzer subrecipe with:
-    workspace_dir: "{{ workspace_dir }}"
-    min_occurrences: 3
-  ```
 
-  The subrecipe will:
-  - Identify issues appearing 3+ times across rounds
-  - Categorize as Fix/Ignore/Document
-  - Provide specific recommendations for each category
-
-  Use the analysis to:
-  - Focus on fixable issues with alternative approaches
-  - Exclude false positives from future analysis
-  - Document issues requiring manual intervention
-
-  Continue the migration loop focusing on fixable issues only.
+  ---
 
   ## Guidelines
 
-  - **Focus on logical grouping**: Identify interdependent issues and fix them in optimal order
-  - **Be systematic**: Follow your planned fix order rather than addressing issues randomly
-  - **Be thorough**: Verify each fix doesn't break existing features
-  - **Track progress**: Maintain clear documentation in workspace directories
-  - **Use subrecipes**: Delegate specialized tasks (discovery, testing, issue analysis) to appropriate subrecipes
-  - **Follow target instructions**: Priority guidance from `targets/<target>.md` files
-  - **Iterate until complete**: Continue until all exit criteria are met
-
-  The migration workspace will contain organized outputs from each round, making it easy to review progress, understand decisions, and audit the entire migration process.
+  - **One group per round** for clear feedback
+  - **Follow planned order** - foundation before dependent changes
+  - **Verify each fix** - don't break existing features
+  - **Document unfixable issues** after 2+ failed approaches
+  - **Use all issue sources** - Kantra is just one input

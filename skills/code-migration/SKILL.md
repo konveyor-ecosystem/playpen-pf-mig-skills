@@ -1,163 +1,185 @@
 ---
 name: code-migration
-description: Migrate applications between technology stacks using Kantra static analysis. Use when migrating Java, Node.js, Python, Go, or .NET applications, upgrading frameworks, modernizing codebases, dependency upgrades, or framework version upgrades. Keywords: kantra, source code migration, technology migration.
+description: Migrate applications between technologies using kantra static analysis and automated fixes. Use when migrating Java, Node.js, Python, Go, or .NET applications. Keywords: kantra, migration, upgrade, modernize.
 ---
 
-# Code Migration with Kantra
+# Code Migration
 
-Supported providers: java, nodejs, python, go, dotnet
+Migrate applications by identifying issues from multiple sources, fixing them systematically, and validating the result.
 
-## Setup and Discovery
+## Issue Sources
 
-Delegate project discovery to the project-explorer sub-agent to identify:
-- Build system and build command
-- Test suites and test commands
-- Lint configuration and lint command
+Collect issues from ALL of these sources during analysis.
 
-Create a migration workspace directory **outside** the application directory (e.g., `/tmp/migration-workspace-<app-name>/`).
+| Source | Examples |
+|--------|----------|
+| Kantra analysis | Deprecated APIs, breaking changes, migration patterns |
+| Build errors | Compilation failures, type errors, missing deps |
+| Lint errors | Style violations, unused imports |
+| Test failures | Broken tests from API changes |
+| Target docs | Breaking changes Kantra doesn't detect (check `targets/<target>.md`) |
 
-Check for target-specific instructions at `targets/<target>.md` and follow that guidance first.
+Kantra is a static source code analysis tool that uses rules to identify migration issues in the source code.
 
-## Migration Workflow Checklist
+## Sub-Agents
 
-Copy this to track progress:
+Delegate to these specialized agents:
 
-```
-Migration Progress:
-- [ ] Project discovery complete
-- [ ] Initial Kantra analysis
-- [ ] Fix plan created
-- [ ] Fixes applied
-- [ ] Validation passed (Kantra + build + tests)
-- [ ] Exit criteria met
-```
+| Task | Sub-Agent | When |
+|------|-----------|------|
+| Discover project structure | `project-explorer` | Start of Phase 1 |
+| Build Kantra command | `kantra-command-builder` | Phase 1, after discovery |
+| Run tests | `test-runner` | Every validation step |
+| Analyze stuck issues | `issue-analyzer` | Same issue appears 3+ rounds |
 
-## Migration Loop
+---
 
-Execute iteratively until exit criteria are met:
+## Phase 1: Discovery
 
-### 1. Run Analysis
+1. **Explore project**: Delegate to `project-explorer`. Get build command, test commands, lint command.
 
-```bash
-kantra analyze --input <project_path> --target <target1> --target <target2> --output <work_dir>/kantra-output --provider <provider>
-```
+2. **Build Kantra command**: Ask user:
+   - Use custom rules? (If yes, get path)
+   - Enable default rulesets?
 
-Options:
-- Add `--rules <path>` for custom rules
-- Add `--enable-default-rulesets=false` to disable default rules
+   Delegate to `kantra-command-builder` with user's answers. It returns flags; you add `--input` and `--output`.
 
-### 2. Parse Results
+3. **Create workspace**: Create temp directory *outside* the project:
+   ```bash
+   WORK_DIR=$(mktemp -d -t migration-XXXXXX)
+   ```
 
-Use bundled script to analyze Kantra output (returns JSON by default):
+4. **Check target technology specific guidance**: Read `targets/<target>.md` if it exists. Follow pre-migration steps before Phase 2.
 
-```bash
-python scripts/kantra_output_helper.py analyze <work_dir>/kantra-output/output.yaml
-```
+---
 
-This returns structured JSON with:
-- `total_issues`: Total count of distinct issues
-- `issues`: List of issues with rule_id, description, file_count, and affected files
+## Phase 2: Fix Loop
 
-### 3. Plan Fixes
+### First Round Only
 
-**IMPORTANT**: Do NOT group by simple metrics like file_count, severity, or effort alone.
+Run initial analysis to create the fix plan:
 
-Create detailed fix plan in `<workspace>/plan.md` by analyzing interdependencies:
+1. Run Kantra: `kantra analyze --input <project> --output $WORK_DIR/round-1/kantra <FLAGS>`
+2. Run build, lint, unit tests (delegate to `test-runner` for tests)
+3. Collect ALL issues from ALL sources (see Issue Sources table)
+4. Create `$WORK_DIR/status.md` using the template below
 
-#### a) Identify Interdependencies
+### Fix Loop Template
 
-For each issue, analyze:
-- **What other issues does this relate to?** (same subsystem, same file, similar changes)
-- **What must be fixed before this?** (e.g., can't fix API usage until imports are updated)
-- **What will this break if fixed first?** (will fixing imports cause build failures?)
-- **Which issues should be fixed together?** (minimize back-and-forth changes)
-
-#### b) Create Logical Groups
-
-Group issues that:
-- Affect the same architectural layer or subsystem
-- Have dependency relationships (fix A enables fixing B)
-- Minimize rework (avoid fixing something that will break when you fix something else later)
-
-NOT based on: file_count, severity labels, or prescribed categories
-
-#### c) Order Groups to Minimize Iterations
-
-Sequence groups so:
-- Foundation changes come before dependent changes
-- Each group's fixes don't create new issues for previous groups
-- Build remains functional after each group (when possible)
-
-#### d) Document Plan
-
-Use this template:
+Create `$WORK_DIR/status.md`:
 
 ```markdown
-# Migration Plan
+# Migration Status
 
-## Issues Analysis
-[What patterns you identified, what subsystems are affected]
+## Groups
 
-## Fix Groups (in order)
+- [ ] Group 1: [Name] - [Brief description]
+- [ ] Group 2: [Name] - [Brief description]
+- [ ] Group 3: [Name] - [Brief description]
+
+## Group Details
 
 ### Group 1: [Name]
-**Rationale**: [Why these issues are grouped and why this group is first]
-**Issues**: [rule-id-1, rule-id-2, ...]
-**Dependencies**: [What this group depends on, what depends on this]
-**Files affected**: [list]
+**Why grouped**: [Related issues, same subsystem, etc.]
+**Issues**:
+- [Issue from Kantra/build/lint/tests]
+- [Issue from Kantra/build/lint/tests]
+**Files**: [file1.ts, file2.ts]
 
 ### Group 2: [Name]
-**Rationale**: [Why this comes after Group 1]
 ...
+
+## Round Log
+
+(Append after each round)
 ```
 
-Identify additional issues beyond Kantra: breaking changes, deprecated APIs, dependency conflicts.
+### Each Round
 
-Update plan.md as you progress through iterations.
+```
+Round Checklist:
+- [ ] Pick next incomplete group
+- [ ] Apply fixes for that group
+- [ ] Run Kantra + build + lint + unit tests
+- [ ] Mark group complete in status.md
+- [ ] Add new issues to plan if any appeared
+```
 
-### 4. Apply Fixes and Validate
+1. **Pick**: Select first incomplete group from status.md
+2. **Fix**: Apply all fixes for that group
+3. **Validate**: Run Kantra, build, lint, unit tests (delegate tests to `test-runner`)
+4. **Update**: Mark group done, log the round
 
-Apply fixes following your plan, then validate:
+Append to status.md:
+```markdown
+### Round N: [Group Name]
+- Fixed: [count] issues
+- New issues: [count or "none"]
+- Build: PASS/FAIL
+- Tests: PASS/FAIL/NONE
+```
 
-a) Re-run Kantra analysis to verify issue count decreased
+### Exit Check
 
-b) Run build to ensure no compilation errors
+After each round, check:
 
-c) Run lint to catch code quality issues
+| Condition | Done? |
+|-----------|-------|
+| All groups complete | ☐ |
+| Kantra: 0 issues | ☐ |
+| Build: passes | ☐ |
+| Unit tests: pass | ☐ |
 
-d) Delegate to test-runner sub-agent (executes tests in priority order: behavioral/E2E → integration → unit)
+- **Any unchecked** → Continue loop (next group)
+- **All checked** → Proceed to Phase 3
 
-e) Compare issue counts to previous round - if no progress, reassess approach
+### If Stuck
 
-### 5. Exit Decision
+If the same issue appears 3+ rounds, delegate to `issue-analyzer` to determine if it's fixable, a false positive, or needs manual attention.
 
-**Exit criteria (ALL must be true):**
-- Kantra analysis reports 0 issues
-- Build succeeds
-- All tests pass
-- No known unfixed migration issues remain
+---
 
-**If criteria NOT met:** Continue to next iteration.
+## Phase 3: Final Validation
 
-**If an issue cannot be fixed:**
-- Attempt at least 2 different approaches before marking unfixable
-- Document why it cannot be fixed automatically
-- Continue fixing other issues
-- Only exit after ALL fixable issues are resolved AND unfixable ones are documented
+Run E2E/behavioral tests and complete target-specific validation.
 
-## Analyzing Persistent Issues
+### E2E Testing
 
-If issues remain unfixed after multiple iterations, delegate to issue-analyzer sub-agent.
+1. Delegate to `test-runner` with E2E test commands
+2. If tests FAIL → Fix issues, re-run
+3. If tests PASS → Continue to target validation
 
-The sub-agent will identify issues appearing 3+ times and recommend:
-- False positives to ignore
-- Unfixable issues to document and skip
-- Fixable issues requiring different approaches
+### Target Validation
 
-Focus efforts on fixable issues only.
+Check `targets/<target>.md` for post-migration steps (e.g., visual comparison for UI migrations).
+
+### Exit Criteria
+
+All must be checked:
+
+- [ ] Kantra: 0 issues
+- [ ] Build: passes
+- [ ] Unit tests: pass
+- [ ] E2E tests: pass
+- [ ] Target-specific validation complete
+
+Update status.md:
+```markdown
+## Complete
+
+- Total rounds: N
+- Build: PASS
+- Unit tests: PASS
+- E2E tests: PASS
+- Target validation: PASS
+```
+
+---
 
 ## Guidelines
 
-- **Focus on logical grouping**: Identify interdependent issues and fix them in optimal order
-- **Be systematic**: Follow your planned fix order rather than addressing issues randomly
-- **Be thorough**: Verify each fix doesn't break existing features
+- **One group per round** for clear feedback
+- **Follow planned order** - foundation before dependent changes
+- **Verify each fix** - don't break existing features
+- **Document unfixable issues** after 2+ failed approaches
+- **Use all issue sources** - Kantra is just one input
