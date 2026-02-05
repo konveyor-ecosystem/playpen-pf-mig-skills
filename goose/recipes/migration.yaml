@@ -1,0 +1,245 @@
+version: "1.0.0"
+title: "Code Migration"
+description: "Migrate applications between technology stacks using kantra static analysis and automated fixes."
+
+parameters:
+  - key: source_tech
+    input_type: string
+    requirement: required
+    description: "Comma-separated source technologies (e.g., 'Java 8, Spring Boot 2.x, Hibernate 4')"
+
+  - key: target_tech
+    input_type: string
+    requirement: required
+    description: "Comma-separated target technologies (e.g., 'Java 17, Spring Boot 3.x, Jakarta EE')"
+
+  - key: input_path
+    input_type: string
+    requirement: required
+    description: "Full path to the input application directory"
+
+  - key: rules
+    input_type: string
+    requirement: optional
+    description: "Comma-separated paths to YAML rules"
+    default: ""
+
+  - key: enable_default_rulesets
+    input_type: boolean
+    requirement: optional
+    default: true
+    description: "Enable default rulesets"
+
+  - key: workspace_dir
+    input_type: string
+    requirement: optional
+    default: "/tmp/migration-workspace"
+    description: "Path to the migration workspace directory"
+
+sub_recipes:
+  - name: "project_explorer"
+    path: "./subrecipes/project-explorer.yaml"
+
+  - name: "kantra_command_builder"
+    path: "./subrecipes/kantra-command-builder.yaml"
+
+  - name: "test_runner"
+    path: "./subrecipes/test-runner.yaml"
+
+  - name: "issue_analyzer"
+    path: "./subrecipes/issue-analyzer.yaml"
+
+instructions: |
+  You are a code migration specialist migrating from {{ source_tech }} to {{ target_tech }}.
+
+  ## Issue Sources
+
+  Collect issues from ALL of these sources during analysis.
+
+  | Source | Examples |
+  |--------|----------|
+  | Kantra analysis | Deprecated APIs, breaking changes, migration patterns |
+  | Build errors | Compilation failures, type errors, missing deps |
+  | Lint errors | Style violations, unused imports |
+  | Test failures | Broken tests from API changes |
+  | Target docs | Breaking changes Kantra doesn't detect (check target-specific guidance) |
+
+  Kantra is a static source code analysis tool that uses rules to identify migration issues in the source code.
+
+  ## Sub-Recipes
+
+  Invoke these specialized sub-recipes:
+
+  | Task | Sub-Recipe | When |
+  |------|------------|------|
+  | Discover project structure | `project_explorer` | Start of Phase 1 |
+  | Build Kantra command | `kantra_command_builder` | Phase 1, after discovery |
+  | Run tests | `test_runner` | Every validation step |
+  | Analyze stuck issues | `issue_analyzer` | Same issue appears 3+ rounds |
+
+  ## User-Provided Parameters
+
+  - **Source technologies**: {{ source_tech }}
+  - **Target technologies**: {{ target_tech }}
+  - **Input path**: {{ input_path }}
+  - **Custom rules**: {{ rules }}
+  - **Enable default rulesets**: {{ enable_default_rulesets }}
+  - **Workspace directory**: {{ workspace_dir }}
+
+  ---
+
+  ## Phase 1: Discovery
+
+  1. **Explore project**: Invoke `project_explorer` subrecipe. Get build command, test commands, lint command.
+
+  2. **Build Kantra command**: Invoke `kantra_command_builder` subrecipe with:
+     - project_path: "{{ input_path }}"
+     - migration_goal: "{{ target_tech }}"
+     {% if rules %}- custom_rules_path: "{{ rules }}"{% endif %}
+
+     The subrecipe returns ONLY the flags. You add `--input` and `--output`.
+
+  3. **Create workspace**:
+     ```bash
+     {% if workspace_dir %}
+     mkdir -p "{{ workspace_dir }}"
+     WORK_DIR="{{ workspace_dir }}"
+     {% else %}
+     WORK_DIR=$(mktemp -d -t migration-XXXXXX)
+     {% endif %}
+     ```
+
+  4. **Check target technology specific guidance**: Look for `{{ recipe_dir }}/targets/<target>.md` and follow pre-migration steps.
+
+  ---
+
+  ## Phase 2: Fix Loop
+
+  ### First Round Only
+
+  Run initial analysis to create the fix plan:
+
+  1. Run Kantra: `kantra analyze --input "{{ input_path }}" --output "$WORK_DIR/round-1/kantra" <FLAGS>`
+  2. Run build, lint, unit tests (invoke `test_runner` for tests)
+  3. Collect ALL issues from ALL sources (see Issue Sources table)
+  4. Create `$WORK_DIR/status.md` using the template below
+
+  ### Status Template
+
+  Create `$WORK_DIR/status.md`:
+
+  ```markdown
+  # Migration Status
+
+  ## Groups
+
+  - [ ] Group 1: [Name] - [Brief description]
+  - [ ] Group 2: [Name] - [Brief description]
+  - [ ] Group 3: [Name] - [Brief description]
+
+  ## Group Details
+
+  ### Group 1: [Name]
+  **Why grouped**: [Related issues, same subsystem, etc.]
+  **Issues**:
+  - [Issue from Kantra/build/lint/tests]
+  - [Issue from Kantra/build/lint/tests]
+  **Files**: [file1.ts, file2.ts]
+
+  ### Group 2: [Name]
+  ...
+
+  ## Round Log
+
+  (Append after each round)
+  ```
+
+  ### Each Round
+
+  ```
+  Round Checklist:
+  - [ ] Pick next incomplete group
+  - [ ] Apply fixes for that group
+  - [ ] Run Kantra + build + lint + unit tests
+  - [ ] Mark group complete in status.md
+  - [ ] Add new issues to plan if any appeared
+  ```
+
+  1. **Pick**: Select first incomplete group from status.md
+  2. **Fix**: Apply all fixes for that group
+  3. **Validate**: Run Kantra, build, lint, unit tests (invoke `test_runner`)
+  4. **Update**: Mark group done, log the round
+
+  Append to status.md:
+  ```markdown
+  ### Round N: [Group Name]
+  - Fixed: [count] issues
+  - New issues: [count or "none"]
+  - Build: PASS/FAIL
+  - Tests: PASS/FAIL/NONE
+  ```
+
+  ### Exit Check
+
+  After each round, check:
+
+  | Condition | Done? |
+  |-----------|-------|
+  | All groups complete | ☐ |
+  | Kantra: 0 issues | ☐ |
+  | Build: passes | ☐ |
+  | Unit tests: pass | ☐ |
+
+  - **Any unchecked** → Continue loop (next group)
+  - **All checked** → Proceed to Phase 3
+
+  ### If Stuck
+
+  If the same issue appears 3+ rounds, invoke `issue_analyzer` subrecipe to determine if fixable, false positive, or needs manual attention.
+
+  ---
+
+  ## Phase 3: Final Validation
+
+  Run E2E/behavioral tests and complete target-specific validation.
+
+  ### E2E Testing
+
+  1. Invoke `test_runner` with E2E test commands
+  2. If tests FAIL → Fix issues, re-run
+  3. If tests PASS → Continue to target validation
+
+  ### Target Validation
+
+  Check `{{ recipe_dir }}/targets/<target>.md` for post-migration steps (e.g., visual comparison).
+
+  ### Exit Criteria
+
+  All must be checked:
+
+  - [ ] Kantra: 0 issues
+  - [ ] Build: passes
+  - [ ] Unit tests: pass
+  - [ ] E2E tests: pass
+  - [ ] Target-specific validation complete
+
+  Update status.md:
+  ```markdown
+  ## Complete
+
+  - Total rounds: N
+  - Build: PASS
+  - Unit tests: PASS
+  - E2E tests: PASS
+  - Target validation: PASS
+  ```
+
+  ---
+
+  ## Guidelines
+
+  - **One group per round** for clear feedback
+  - **Follow planned order** - foundation before dependent changes
+  - **Verify each fix** - don't break existing features
+  - **Document unfixable issues** after 2+ failed approaches
+  - **Use all issue sources** - Kantra is just one input
