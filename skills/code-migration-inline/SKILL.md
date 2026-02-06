@@ -58,10 +58,15 @@ Discover build system, test commands, and lint configuration.
 | Go | `golangci-lint run` |
 | Python | `flake8`, `pylint`, `ruff` |
 
+**Find dev server command:**
+
+Look for how to run the application locally (e.g., `npm start`, `npm run dev`).
+
 **Record findings:**
 
 ```
 Build: <command>
+Dev server: <command>
 Lint: <command>
 Unit tests: <command>
 Integration tests: <command>
@@ -126,10 +131,13 @@ Read `targets/<target>.md` if it exists. Follow pre-migration steps before Phase
 Run initial analysis to create the fix plan:
 
 1. Run Kantra: `kantra analyze --input <project> --output $WORK_DIR/round-1/kantra <FLAGS>`
-2. Run build and lint commands
-3. Run unit tests
-4. Collect ALL issues from ALL sources (see Issue Sources table)
-5. Create `$WORK_DIR/status.md` using the template below
+2. Parse Kantra output using the helper script:
+   - Overview: `python scripts/kantra_output_helper.py analyze $WORK_DIR/round-1/kantra/output.yaml`
+   - File details: `python scripts/kantra_output_helper.py file $WORK_DIR/round-1/kantra/output.yaml <file>`
+3. Run build and lint commands
+4. Run unit tests
+5. Collect ALL issues from ALL sources (see Issue Sources table)
+6. Create `$WORK_DIR/status.md` using the template below
 
 ### Fix Loop Template
 

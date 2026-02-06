@@ -1,0 +1,125 @@
+version: "1.0.0"
+title: "Visual Baseline Capture"
+description: "Capture baseline screenshots of all important pages before migration. Use in pre-migration phase for UI migrations."
+
+parameters:
+  - key: work_dir
+    input_type: string
+    requirement: required
+    description: "Path to the migration workspace directory"
+
+  - key: dev_command
+    input_type: string
+    requirement: required
+    description: "Command to start the dev server (from project discovery)"
+
+  - key: project_path
+    input_type: string
+    requirement: required
+    description: "Path to the project source code"
+
+instructions: |
+  You are a visual testing specialist. Capture baseline screenshots before migration begins.
+
+  ## Inputs
+
+  - **Work directory**: {{ work_dir }}
+  - **Dev command**: {{ dev_command }}
+  - **Project path**: {{ project_path }}
+
+  ## Process
+
+  ### 1. Discover Pages
+
+  Find ALL important pages using multiple methods:
+
+  ```bash
+  # Search for route definitions
+  grep -rE "(path=|path:)" --include="*.tsx" --include="*.jsx" --include="*.ts" --include="*.js" {{ project_path }}/src
+  ```
+
+  Also look for:
+  - `pages/`, `views/`, `routes/` folders
+  - Navigation menus and sidebars in code
+  - Modals, drawers, tabs with distinct content
+
+  Create a list of routes to capture. If pages require auth/data, note if you can mock them.
+
+  ### 2. Start Application and Wait
+
+  **Run the dev server in the background** and determine the URL from its output:
+
+  ```bash
+  cd {{ project_path }}
+  {{ dev_command }} &
+  ```
+
+  1. Run the dev command **in the background** (append `&` or equivalent)
+  2. Observe the output for the local URL (e.g., `http://localhost:3000`)
+  3. Wait for the server to be ready (poll the URL every second, up to 120 seconds)
+  4. After server responds, wait additional 5 seconds for JS/assets to load
+
+  **Important:** Do not proceed until the server is fully ready. If it doesn't start within 120 seconds, report the error and stop.
+
+  ### 3. Capture Screenshots
+
+  Create baseline directory:
+  ```bash
+  mkdir -p {{ work_dir }}/baseline
+  ```
+
+  For each route, use `playwright-mcp`:
+  1. `browser_navigate` to `<app_url><route>`
+  2. Wait for page to stabilize (network idle)
+  3. `browser_take_screenshot`
+  4. Save to `{{ work_dir }}/baseline/<route-name>.png`
+
+  **Naming convention:**
+  - `/` → `home.png`
+  - `/dashboard` → `dashboard.png`
+  - `/settings/profile` → `settings-profile.png`
+
+  ### 4. Stop Server
+
+  ```bash
+  kill $DEV_PID
+  ```
+
+  ### 5. Create Manifest
+
+  Create `{{ work_dir }}/baseline/manifest.md`:
+
+  ```markdown
+  # Visual Baseline
+
+  Captured: <timestamp>
+  Project: {{ project_path }}
+  App URL: {{ app_url }}
+
+  ## Pages
+
+  | Route | Screenshot | Notes |
+  |-------|------------|-------|
+  | / | home.png | |
+  | /dashboard | dashboard.png | |
+  | /settings | settings.png | Requires mock auth |
+  ```
+
+  ## Output
+
+  Return a summary:
+
+  ```
+  ## Baseline Capture Complete
+
+  Directory: {{ work_dir }}/baseline
+  Pages captured: [count]
+
+  | Route | Screenshot |
+  |-------|------------|
+  | / | home.png |
+  | /dashboard | dashboard.png |
+  ...
+
+  Manifest: {{ work_dir }}/baseline/manifest.md
+  ```

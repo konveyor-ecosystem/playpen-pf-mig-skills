@@ -49,6 +49,12 @@ sub_recipes:
   - name: "issue_analyzer"
     path: "./subrecipes/issue-analyzer.yaml"
 
+  - name: "visual_baseline"
+    path: "./subrecipes/visual-baseline.yaml"
+
+  - name: "visual_compare"
+    path: "./subrecipes/visual-compare.yaml"
+
 instructions: |
   You are a code migration specialist migrating from {{ source_tech }} to {{ target_tech }}.
 
@@ -76,6 +82,8 @@ instructions: |
   | Build Kantra command | `kantra_command_builder` | Phase 1, after discovery |
   | Run tests | `test_runner` | Every validation step |
   | Analyze stuck issues | `issue_analyzer` | Same issue appears 3+ rounds |
+  | Capture visual baseline | `visual_baseline` | Pre-migration (UI migrations) |
+  | Compare visual changes | `visual_compare` | Post-migration (UI migrations) |
 
   ## User-Provided Parameters
 
@@ -120,9 +128,12 @@ instructions: |
   Run initial analysis to create the fix plan:
 
   1. Run Kantra: `kantra analyze --input "{{ input_path }}" --output "$WORK_DIR/round-1/kantra" <FLAGS>`
-  2. Run build, lint, unit tests (invoke `test_runner` for tests)
-  3. Collect ALL issues from ALL sources (see Issue Sources table)
-  4. Create `$WORK_DIR/status.md` using the template below
+  2. Parse Kantra output using the helper script:
+     - Overview: `python {{ recipe_dir }}/scripts/kantra_output_helper.py analyze $WORK_DIR/round-1/kantra/output.yaml`
+     - File details: `python {{ recipe_dir }}/scripts/kantra_output_helper.py file $WORK_DIR/round-1/kantra/output.yaml <file>`
+  3. Run build, lint, unit tests (invoke `test_runner` for tests)
+  4. Collect ALL issues from ALL sources (see Issue Sources table)
+  5. Create `$WORK_DIR/status.md` using the template below
 
   ### Status Template
 

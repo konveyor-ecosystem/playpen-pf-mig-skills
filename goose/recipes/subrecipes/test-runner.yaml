@@ -56,7 +56,3 @@ instructions: |
   4. **Keep under 100 lines** even with failures
 
   Focus on actionable information to fix issues quickly.
-
-tools:
-  - run_shell_command
-  - read_file

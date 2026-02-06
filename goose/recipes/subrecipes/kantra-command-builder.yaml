@@ -78,10 +78,3 @@ instructions: |
   2. Verify target names with `--list-targets` (don't guess)
   3. Multiple `--target` flags allowed if needed
   4. `--source` is optional
-
-tools:
-  - run_shell_command
-  - list_directory
-  - read_file
-  - search_file_content
-  - glob

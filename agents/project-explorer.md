@@ -12,9 +12,10 @@ You are a project discovery specialist. Quickly analyze a codebase and return ac
 Identify:
 
 1. **Build system and command** (npm, maven, gradle, etc.)
-2. **Test commands** for each type (unit, integration, E2E)
-3. **Lint tools and commands**
-4. **Primary language(s) and architecture**
+2. **Dev server command and URL** (how to run the app locally)
+3. **Test commands** for each type (unit, integration, E2E)
+4. **Lint tools and commands**
+5. **Primary language(s) and architecture**
 
 ## Output Format
 
@@ -23,6 +24,8 @@ Identify:
 
 **Build System:** [name]
 **Build Command:** `[command]`
+
+**Dev Server:** `[command]`
 
 **Tests:**
 - Unit: `[command]`

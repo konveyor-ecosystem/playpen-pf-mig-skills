@@ -10,19 +10,12 @@ Complete these steps BEFORE starting the fix loop (Phase 2).
 
 ### 1. Capture Visual Baseline
 
-Take screenshots of all routes before making changes. This enables visual regression detection.
+Invoke `visual_baseline` sub-recipe with:
+- `work_dir`: `$WORK_DIR`
+- `project_path`: path to the project
+- `dev_command`: dev server command (from project discovery)
 
-**Steps:**
-1. Find important routes / pages / components in the application
-   - If routes require authorization, mock data, understand whether you can mock them
-2. Run the application (preferably in dev mode) in background
-3. For each route, use `playwright-mcp`:
-   - `browser_navigate` to route
-   - `browser_take_screenshot` → save to `$WORK_DIR/baseline/<route>.png`
-4. Stop application
-5. Create `$WORK_DIR/baseline/manifest.md` listing all captured pages
-
-**Naming**: `/` → `home.png`, `/dashboard` → `dashboard.png`, `/settings/profile` → `settings-profile.png`
+The sub-recipe will start the application, wait for it to be ready, capture screenshots, then stop it.
 
 ### 2. Run pf-codemods
 
@@ -77,21 +70,17 @@ Complete after E2E tests pass.
 
 ### Visual Comparison (Required)
 
-1. Capture post-migration screenshots (same routes as baseline)
-2. Compare each page against baseline
-3. Classify differences in each page:
-   - **⚠️ Minor**
-      - Expected PF6 styling updates
-      - Theme / color changes
-      - Padding issues
-   - **❌ Major**: Broken layout, missing elements
-   - If no issues found, mark the page as identical.
-4. Fix major & minor regressions before completing migration
+Invoke `visual_compare` sub-recipe with:
+- `work_dir`: `$WORK_DIR`
+- `project_path`: path to the project
+- `dev_command`: dev server command (from project discovery)
 
-For detailed visual testing steps, see [visual-testing.md](visual-testing.md).
+The sub-recipe will start the application, wait for it to be ready, capture screenshots, compare against baseline, then stop it.
+
+**Fix ALL issues (major AND minor) before completing migration.** Do not mark minor issues as acceptable.
 
 ### Completion Checklist
 
 - [ ] Visual comparison done
-- [ ] Major regressions fixed
+- [ ] ALL visual issues fixed (major AND minor)
 - [ ] Migration comments removed

@@ -76,10 +76,3 @@ instructions: |
   ```
 
   Keep under 200 lines. Be thorough but concise.
-
-tools:
-  - run_shell_command
-  - list_directory
-  - read_file
-  - search_file_content
-  - glob

@@ -10,17 +10,36 @@ Complete these steps BEFORE starting the fix loop (Phase 2).
 
 ### 1. Capture Visual Baseline
 
-Take screenshots of all routes before making changes. This enables visual regression detection.
+Capture screenshots of all important pages before migration begins.
 
 **Steps:**
-1. Find important routes / pages / components in the application
-   - If routes require authorization, mock data, understand whether you can mock them
-2. Run the application (preferably in dev mode) in background
-3. For each route, use `playwright-mcp`:
-   - `browser_navigate` to route
-   - `browser_take_screenshot` → save to `$WORK_DIR/baseline/<route>.png`
-4. Stop application
-5. Create `$WORK_DIR/baseline/manifest.md` listing all captured pages
+
+1. **Discover pages** - Find ALL important pages:
+   - Search code for route definitions
+   - Look in `pages/`, `views/`, `routes/` folders
+   - Check navigation menus and sidebars in code
+   - Identify modals, drawers, tabs with distinct content
+   - If pages require auth/data, note if you can mock them
+
+2. **Start application and wait** - Run dev server **in the background** (use command from project discovery, append `&` or equivalent). Observe output to find the local URL. Wait for server to respond (poll every second, up to 120 seconds). After server responds, wait additional 5 seconds for JS/assets to load. **Do not proceed until server is ready.**
+
+3. **Capture screenshots** - For each route, use `playwright-mcp`:
+   - `browser_navigate` to `<app_url><route>`
+   - Wait for page to stabilize
+   - `browser_take_screenshot` → save to `$WORK_DIR/baseline/<route-name>.png`
+
+4. **Stop application**
+
+5. **Create manifest** - Create `$WORK_DIR/baseline/manifest.md`:
+   ```markdown
+   # Visual Baseline
+   Captured: <timestamp>
+
+   | Route | Screenshot | Notes |
+   |-------|------------|-------|
+   | / | home.png | |
+   | /dashboard | dashboard.png | |
+   ```
 
 **Naming**: `/` → `home.png`, `/dashboard` → `dashboard.png`, `/settings/profile` → `settings-profile.png`
 
@@ -77,21 +96,48 @@ Complete after E2E tests pass.
 
 ### Visual Comparison (Required)
 
-1. Capture post-migration screenshots (same routes as baseline)
-2. Compare each page against baseline
-3. Classify differences in each page:
-   - **⚠️ Minor**
-      - Expected PF6 styling updates
-      - Theme / color changes
-      - Padding issues
-   - **❌ Major**: Broken layout, missing elements
-   - If no issues found, mark the page as identical.
-4. Fix major & minor regressions before completing migration
+Compare post-migration UI against baseline screenshots.
 
-For detailed visual testing steps, see [visual-testing.md](visual-testing.md).
+**Steps:**
+
+1. **Start application and wait** - Run dev server **in the background** (use command from project discovery, append `&` or equivalent). Observe output to find the local URL. Wait for server to respond (poll every second, up to 120 seconds). After server responds, wait additional 5 seconds for JS/assets to load. **Do not proceed until server is ready.**
+
+2. **Capture post-migration screenshots** - For each route in baseline manifest:
+   - `browser_navigate` to `<app_url><route>`
+   - Wait for page to stabilize
+   - `browser_take_screenshot` → save to `$WORK_DIR/post-migration/<route-name>.png`
+
+3. **Stop application**
+
+4. **Compare each page** - **Assume differences exist.** Actively search for problems.
+
+   For each page:
+   - Load both images (baseline and post-migration)
+   - Describe baseline: list what you see - sections, components, layout
+   - Describe post-migration: list what you see in the new screenshot
+   - Compare each aspect:
+
+     | Aspect | Check | Your Finding |
+     |--------|-------|--------------|
+     | Layout | Sections same position/size? | [state: same OR describe difference] |
+     | Navigation | Sidebar/header/links present? | [state: same OR describe difference] |
+     | Components | All buttons/forms/tables/cards present? | [state: same OR describe difference] |
+     | Text | Labels readable? No truncation? | [state: same OR describe difference] |
+     | Spacing | Consistent gaps? No overlaps? | [state: same OR describe difference] |
+     | Colors | Background/text/borders correct? | [state: same OR describe difference] |
+     | Icons | All visible and sized correctly? | [state: same OR describe difference] |
+
+   - List ALL differences found - even small ones
+   - Classify: ✓ Identical / ⚠️ Minor (requires fix) / ❌ Major (requires fix)
+
+   **Both minor and major issues require fixes.** Do not mark minor issues as acceptable.
+
+5. **Create report** - Create `$WORK_DIR/visual-diff-report.md` with summary and issues
+
+**Fix ALL issues (major AND minor) before completing migration.** Do not mark minor issues as acceptable.
 
 ### Completion Checklist
 
 - [ ] Visual comparison done
-- [ ] Major regressions fixed
+- [ ] ALL visual issues fixed (major AND minor)
 - [ ] Migration comments removed

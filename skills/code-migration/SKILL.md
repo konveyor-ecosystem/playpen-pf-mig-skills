@@ -31,6 +31,8 @@ Delegate to these specialized agents:
 | Build Kantra command | `kantra-command-builder` | Phase 1, after discovery |
 | Run tests | `test-runner` | Every validation step |
 | Analyze stuck issues | `issue-analyzer` | Same issue appears 3+ rounds |
+| Capture visual baseline | `visual-baseline` | Pre-migration (UI migrations) |
+| Compare visual changes | `visual-compare` | Post-migration (UI migrations) |
 
 ---
 
@@ -60,9 +62,12 @@ Delegate to these specialized agents:
 Run initial analysis to create the fix plan:
 
 1. Run Kantra: `kantra analyze --input <project> --output $WORK_DIR/round-1/kantra <FLAGS>`
-2. Run build, lint, unit tests (delegate to `test-runner` for tests)
-3. Collect ALL issues from ALL sources (see Issue Sources table)
-4. Create `$WORK_DIR/status.md` using the template below
+2. Parse Kantra output using the helper script:
+   - Overview: `python scripts/kantra_output_helper.py analyze $WORK_DIR/round-1/kantra/output.yaml`
+   - File details: `python scripts/kantra_output_helper.py file $WORK_DIR/round-1/kantra/output.yaml <file>`
+3. Run build, lint, unit tests (delegate to `test-runner` for tests)
+4. Collect ALL issues from ALL sources (see Issue Sources table)
+5. Create `$WORK_DIR/status.md` using the template below
 
 ### Fix Loop Template
 
