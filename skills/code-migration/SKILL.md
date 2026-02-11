@@ -21,33 +21,25 @@ Collect issues from ALL of these sources during analysis.
 
 Kantra is a static source code analysis tool that uses rules to identify migration issues in the source code.
 
-## Sub-Agents
-
-Delegate to these specialized agents:
-
-| Task | Sub-Agent | When |
-|------|-----------|------|
-| Discover project structure | `project-explorer` | Start of Phase 1 |
-| Build Kantra command | `kantra-command-builder` | Phase 1, after discovery |
-| Run tests | `test-runner` | Every validation step |
-| Analyze stuck issues | `issue-analyzer` | Same issue appears 3+ rounds |
-
 ---
 
 ## Phase 1: Discovery
 
-1. **Explore project**: Delegate to `project-explorer`. Get build command, test commands, lint command.
+1. **Explore project**: Delegate to `project-explorer` subagent with the path to the project. Get build command, dev server command, test commands, lint command.
 
 2. **Build Kantra command**: Ask user:
    - Use custom rules? (If yes, get path)
    - Enable default rulesets?
 
-   Delegate to `kantra-command-builder` with user's answers. It returns flags; you add `--input` and `--output`.
+   Delegate to `kantra-command-builder` subagent with the path to the project, the migration goal (target technology), custom rules path (if provided), and whether to enable default rulesets.
+
+   It returns flags; you add `--input` and `--output`.
 
 3. **Create workspace**: Create temp directory *outside* the project:
    ```bash
-   WORK_DIR=$(mktemp -d -t migration-XXXXXX)
+   WORK_DIR=$(mktemp -d -t migration-$(date +%m_%d_%y_%H))
    ```
+   **All subagent delegations below use this directory as the work directory.** All migration artifacts — Kantra output, status files, screenshots, manifests, and reports — must go inside `$WORK_DIR`. Never use the project directory as the work directory.
 
 4. **Check target technology specific guidance**: Read `targets/<target>.md` if it exists. Follow pre-migration steps before Phase 2.
 
@@ -60,9 +52,12 @@ Delegate to these specialized agents:
 Run initial analysis to create the fix plan:
 
 1. Run Kantra: `kantra analyze --input <project> --output $WORK_DIR/round-1/kantra <FLAGS>`
-2. Run build, lint, unit tests (delegate to `test-runner` for tests)
-3. Collect ALL issues from ALL sources (see Issue Sources table)
-4. Create `$WORK_DIR/status.md` using the template below
+2. Parse Kantra output using the helper script:
+   - Overview: `python3 scripts/kantra_output_helper.py analyze $WORK_DIR/round-1/kantra/output.yaml`
+   - File details: `python3 scripts/kantra_output_helper.py file $WORK_DIR/round-1/kantra/output.yaml <file>`
+3. Run build, lint, unit tests (delegate to `test-runner` subagent with the test command from project discovery, specifically ask for unit tests)
+4. Collect ALL issues from ALL sources (see Issue Sources table)
+5. Create `$WORK_DIR/status.md` using the template below
 
 ### Fix Loop Template
 
@@ -107,8 +102,8 @@ Round Checklist:
 
 1. **Pick**: Select first incomplete group from status.md
 2. **Fix**: Apply all fixes for that group
-3. **Validate**: Run Kantra, build, lint, unit tests (delegate tests to `test-runner`)
-4. **Update**: Mark group done, log the round
+3. **Validate**: Run Kantra, build, lint, unit tests (delegate to `test-runner` subagent with the test command, specifically ask for unit tests)
+4. **Update**: Mark the group's checkbox as `[x]` in status.md and log the round. **Always keep status.md up to date** — it is the source of truth for migration progress.
 
 Append to status.md:
 ```markdown
@@ -135,7 +130,7 @@ After each round, check:
 
 ### If Stuck
 
-If the same issue appears 3+ rounds, delegate to `issue-analyzer` to determine if it's fixable, a false positive, or needs manual attention.
+If the same issue appears 3+ rounds, delegate to `issue-analyzer` subagent with the workspace directory path (`$WORK_DIR`).
 
 ---
 
@@ -145,13 +140,13 @@ Run E2E/behavioral tests and complete target-specific validation.
 
 ### E2E Testing
 
-1. Delegate to `test-runner` with E2E test commands
+1. Delegate to `test-runner` subagent with the test command from project discovery, specifically ask for e2e / integration tests
 2. If tests FAIL → Fix issues, re-run
-3. If tests PASS → Continue to target validation
+3. If tests PASS → Continue to target-specific validation
 
-### Target Validation
+### Target-Specific Validation
 
-Check `targets/<target>.md` for post-migration steps (e.g., visual comparison for UI migrations).
+Follow all post-migration steps in `targets/<target>.md`. These steps are mandatory, not optional.
 
 ### Exit Criteria
 

@@ -220,9 +220,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python persistent_issues_analyzer.py /tmp/migration-workspace
-  python persistent_issues_analyzer.py /tmp/migration-workspace --min-occurrences 2
-  python persistent_issues_analyzer.py . --min-occurrences 4
+  python3 persistent_issues_analyzer.py /tmp/migration-workspace
+  python3 persistent_issues_analyzer.py /tmp/migration-workspace --min-occurrences 2
+  python3 persistent_issues_analyzer.py . --min-occurrences 4
 
 The script finds all output.yaml files recursively and identifies issues
 appearing in multiple analysis runs, suggesting they may be difficult to fix.

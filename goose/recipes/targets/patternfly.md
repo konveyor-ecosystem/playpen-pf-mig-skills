@@ -2,27 +2,27 @@
 
 PatternFly 5 to PatternFly 6 migration with visual regression testing.
 
+## Workflow
+
+```
+Pre-Migration → Phase 2 (Fix Loop) → Phase 3 (E2E Tests) → Visual Comparison → Visual Fix → Done
+```
+
 ---
 
 ## Pre-Migration
 
-Complete these steps BEFORE starting the fix loop (Phase 2).
+Complete BEFORE Phase 2.
 
 ### 1. Capture Visual Baseline
 
-Take screenshots of all routes before making changes. This enables visual regression detection.
+Invoke `visual_baseline` sub-recipe with:
+- `work_dir`: the `$WORK_DIR` path created in Phase 1 (e.g., `/tmp/migration-02_10_26_14`)
+- `output_dir`: `$WORK_DIR/baseline`
+- `project_path`: path to the project
+- `dev_command`: dev server command (from project discovery)
 
-**Steps:**
-1. Find important routes / pages / components in the application
-   - If routes require authorization, mock data, understand whether you can mock them
-2. Run the application (preferably in dev mode) in background
-3. For each route, use `playwright-mcp`:
-   - `browser_navigate` to route
-   - `browser_take_screenshot` → save to `$WORK_DIR/baseline/<route>.png`
-4. Stop application
-5. Create `$WORK_DIR/baseline/manifest.md` listing all captured pages
-
-**Naming**: `/` → `home.png`, `/dashboard` → `dashboard.png`, `/settings/profile` → `settings-profile.png`
+This creates `$WORK_DIR/manifest.md` and saves screenshots to `$WORK_DIR/baseline/`.
 
 ### 2. Run pf-codemods
 
@@ -34,10 +34,7 @@ This auto-fixes many PF5→PF6 issues. Some will still need manual fixes.
 
 ### 3. Upgrade Dependencies
 
-```bash
-npm install @patternfly/react-core@^6.x @patternfly/react-table@^6.x @patternfly/react-icons@^6.x
-npm install
-```
+Check `package.json` for all `@patternfly/*` dependencies and upgrade every one of them to `^6.x`. This includes packages like `@patternfly/react-core`, `@patternfly/react-table`, `@patternfly/react-icons`, `@patternfly/patternfly`, and any others the project uses. Then run `npm install`.
 
 Verify build passes after upgrade. Address any obvious issues with the build before moving forward.
 
@@ -73,25 +70,50 @@ Adapt based on your findings:
 
 ## Post-Migration
 
-Complete after E2E tests pass.
+### Visual Regression Loop
 
-### Visual Comparison (Required)
+Repeat the following loop until no unchecked issues remain. N is the fix round, starting at 0.
 
-1. Capture post-migration screenshots (same routes as baseline)
-2. Compare each page against baseline
-3. Classify differences in each page:
-   - **⚠️ Minor**
-      - Expected PF6 styling updates
-      - Theme / color changes
-      - Padding issues
-   - **❌ Major**: Broken layout, missing elements
-   - If no issues found, mark the page as identical.
-4. Fix major & minor regressions before completing migration
+**Step 1: Capture screenshots**
 
-For detailed visual testing steps, see [visual-testing.md](visual-testing.md).
+Invoke `visual_baseline` sub-recipe with:
+- `work_dir`: the `$WORK_DIR` path created in Phase 1 (same path used for baseline)
+- `output_dir`: `$WORK_DIR/post-migration-N` (N = fix round, starting at 0)
+- `project_path`: path to the project
+- `dev_command`: dev server command
+
+The manifest at `$WORK_DIR/manifest.md` already exists, so it will reuse it and only capture screenshots.
+
+**Step 2: Compare**
+
+Invoke `visual_compare` sub-recipe with:
+- `work_dir`: the `$WORK_DIR` path created in Phase 1
+- `compare_dir`: `$WORK_DIR/post-migration-N`
+
+It compares `$WORK_DIR/baseline/` against the compare directory and creates or updates `$WORK_DIR/visual-diff-report.md`.
+
+**Step 3: Check exit condition**
+
+If all issues in `$WORK_DIR/visual-diff-report.md` are checked (`[x]`) → done, exit loop.
+
+If unchecked (`[ ]`) issues remain → continue to step 4.
+
+**Step 4: Fix**
+
+If unchecked issues remain, invoke `visual_fix` sub-recipe with:
+- `work_dir`: the `$WORK_DIR` path created in Phase 1
+- `project_path`: path to the project
+- `dev_command`: dev server command
+- `migration_context`: a brief 2-3 line summary of the migration so far — include what technologies are involved and what has been done (e.g., codemods applied, which issue groups are fixed, what remains)
+
+It fixes unchecked items, marks them `[x]` in the report, and logs fixes to `$WORK_DIR/visual-fixes.md`.
+
+**Fix ALL issues (major AND minor) before completing migration.** Do not mark minor issues as acceptable.
+
+Increment N and go back to step 1.
 
 ### Completion Checklist
 
 - [ ] Visual comparison done
-- [ ] Major regressions fixed
+- [ ] ALL visual issues fixed (all checkboxes in report are `[x]`)
 - [ ] Migration comments removed

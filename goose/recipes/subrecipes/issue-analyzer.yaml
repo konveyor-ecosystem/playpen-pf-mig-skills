@@ -8,19 +8,18 @@ parameters:
     requirement: required
     description: "Path to the migration workspace directory"
 
-instructions: |
+prompt: |
   You are a migration issue analyst. Identify why issues persist and recommend next steps.
+  ## Inputs
+  - **Workspace directory**: {{ workspace_dir }}
 
-  ## When to Use
-
-  Call this agent when an issue appears in 3+ consecutive analysis rounds without resolution.
-
+instructions: |
   ## Process
 
   ### 1. Run Persistent Issues Script
 
   ```bash
-  python scripts/persistent_issues_analyzer.py {{ workspace_dir }}
+  python3 {{ recipe_dir }}/../scripts/persistent_issues_analyzer.py {{ workspace_dir }}
   ```
 
   ### 2. Analyze Each Issue
@@ -76,10 +75,3 @@ instructions: |
   ```
 
   Keep under 200 lines. Be thorough but concise.
-
-tools:
-  - run_shell_command
-  - list_directory
-  - read_file
-  - search_file_content
-  - glob

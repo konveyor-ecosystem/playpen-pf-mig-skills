@@ -2,27 +2,67 @@
 
 PatternFly 5 to PatternFly 6 migration with visual regression testing.
 
+## Workflow
+
+```
+Pre-Migration → Phase 2 (Fix Loop) → Phase 3 (E2E Tests) → Visual Comparison → Visual Fix → Done
+```
+
 ---
 
 ## Pre-Migration
 
-Complete these steps BEFORE starting the fix loop (Phase 2).
+Complete BEFORE Phase 2.
 
 ### 1. Capture Visual Baseline
 
-Take screenshots of all routes before making changes. This enables visual regression detection.
+Discover all UI components and capture baseline screenshots.
 
 **Steps:**
-1. Find important routes / pages / components in the application
-   - If routes require authorization, mock data, understand whether you can mock them
-2. Run the application (preferably in dev mode) in background
-3. For each route, use `playwright-mcp`:
-   - `browser_navigate` to route
-   - `browser_take_screenshot` → save to `$WORK_DIR/baseline/<route>.png`
-4. Stop application
-5. Create `$WORK_DIR/baseline/manifest.md` listing all captured pages
 
-**Naming**: `/` → `home.png`, `/dashboard` → `dashboard.png`, `/settings/profile` → `settings-profile.png`
+1. **Discover all UI elements** - Find ALL important elements (not just routes):
+
+   **Routes/Pages:**
+   - Search for router config, route arrays, path definitions
+   - Check `pages/`, `views/`, `routes/`, `screens/` folders
+   - Find menus, sidebars, navbars and extract all links
+
+   **Interactive Components:**
+   - Modals/Dialogs and their triggers
+   - Drawers/Sidepanels
+   - Forms in modals or triggered by actions
+   - Tabs, accordions, dropdowns with distinct content
+
+   **Do not skip any discoverable element.** For each element, note what triggers it and any required state/data.
+
+2. **Create manifest** - Create `$WORK_DIR/manifest.md`:
+   ```markdown
+   # UI Manifest
+   Project: <project_path>
+
+   ## Routes
+   | Route | Screenshot | Notes |
+   |-------|------------|-------|
+   | / | home.png | |
+   | /dashboard | dashboard.png | |
+
+   ## Interactive Components
+   | Type | Name | Screenshot | Trigger |
+   |------|------|------------|---------|
+   | Modal | Confirm Delete | modal-confirm-delete.png | Click delete button |
+   | Drawer | Settings | drawer-settings.png | Click gear icon |
+   ```
+
+3. **Start application and wait** - Run dev server **in the background** (use command from project discovery, append `&` or equivalent). Observe output to find the local URL. Wait for server to respond (poll every second, up to 120 seconds). After server responds, wait additional 5 seconds for JS/assets to load. **Do not proceed until server is ready.**
+
+4. **Capture screenshots** - For each element in manifest, use `playwright-mcp`:
+   - Navigate to page or trigger component
+   - Wait for content to stabilize
+   - Take screenshot → save to `$WORK_DIR/baseline/<name>.png`
+
+5. **Stop application**
+
+**Naming**: `/` → `home.png`, `/dashboard` → `dashboard.png`. Components: `modal-<name>.png`, `drawer-<name>.png`, `form-<name>.png`
 
 ### 2. Run pf-codemods
 
@@ -34,10 +74,7 @@ This auto-fixes many PF5→PF6 issues. Some will still need manual fixes.
 
 ### 3. Upgrade Dependencies
 
-```bash
-npm install @patternfly/react-core@^6.x @patternfly/react-table@^6.x @patternfly/react-icons@^6.x
-npm install
-```
+Check `package.json` for all `@patternfly/*` dependencies and upgrade every one of them to `^6.x`. This includes packages like `@patternfly/react-core`, `@patternfly/react-table`, `@patternfly/react-icons`, `@patternfly/patternfly`, and any others the project uses. Then run `npm install`.
 
 Verify build passes after upgrade. Address any obvious issues with the build before moving forward.
 
@@ -73,25 +110,99 @@ Adapt based on your findings:
 
 ## Post-Migration
 
-Complete after E2E tests pass.
+### Visual Regression Loop
 
-### Visual Comparison (Required)
+Repeat the following loop until no unchecked issues remain. N is the fix round, starting at 0.
 
-1. Capture post-migration screenshots (same routes as baseline)
-2. Compare each page against baseline
-3. Classify differences in each page:
-   - **⚠️ Minor**
-      - Expected PF6 styling updates
-      - Theme / color changes
-      - Padding issues
-   - **❌ Major**: Broken layout, missing elements
-   - If no issues found, mark the page as identical.
-4. Fix major & minor regressions before completing migration
+**Step 1: Capture screenshots**
 
-For detailed visual testing steps, see [visual-testing.md](visual-testing.md).
+Read `$WORK_DIR/manifest.md` (already created during pre-migration).
+
+1. **Start application and wait** - Run dev server **in the background**. Wait for server to respond. **Do not proceed until server is ready.**
+2. **Capture screenshots** - For each element in manifest, use `playwright-mcp`:
+   - Navigate to page or trigger component
+   - Wait for content to stabilize
+   - Take screenshot → save to `$WORK_DIR/post-migration-N/<name>.png` (N = fix round, starting at 0)
+3. **Stop application**
+
+**Step 2: Compare**
+
+Compare `$WORK_DIR/baseline/` against `$WORK_DIR/post-migration-N/`.
+
+**Assume differences exist.** Actively search for problems.
+
+For each element in manifest:
+- Load both images (baseline and post-migration)
+- Describe what you see in each
+- Compare each aspect:
+
+  | Aspect | Check | Your Finding |
+  |--------|-------|--------------|
+  | Layout | Sections same position/size? | [state: same OR describe difference] |
+  | Navigation | Sidebar/header/links present? | [state: same OR describe difference] |
+  | Components | All buttons/forms/tables/cards present? | [state: same OR describe difference] |
+  | Text | Labels readable? No truncation? | [state: same OR describe difference] |
+  | Spacing | Consistent gaps? No overlaps? | [state: same OR describe difference] |
+  | Colors | Background/text/borders correct? | [state: same OR describe difference] |
+  | Icons | All visible and sized correctly? | [state: same OR describe difference] |
+
+**You MUST fill in the "Your Finding" column for EVERY row.** Do not skip any aspect.
+
+- List ALL differences found - even small ones
+- Classify: ✓ Identical / ⚠️ Minor (requires fix) / ❌ Major (requires fix)
+
+**Both minor and major issues require fixes.** Do not mark minor issues as acceptable.
+
+**Create or update report** - Write `$WORK_DIR/visual-diff-report.md` with checkbox-tracked issues:
+
+```markdown
+# Visual Comparison Report
+
+## Issues
+
+### /dashboard
+- [ ] Card spacing increased ~4px (⚠️ Minor)
+- [ ] Button borders slightly darker (⚠️ Minor)
+
+### /settings
+- [ ] Navigation sidebar missing (❌ Major)
+```
+
+If the report already exists: mark fixed issues as `[x]`, add new issues as `[ ]`.
+
+**Step 3: Check exit condition**
+
+If all issues in `$WORK_DIR/visual-diff-report.md` are checked (`[x]`) → done, exit loop.
+
+If unchecked (`[ ]`) issues remain → continue to step 4.
+
+**Step 4: Fix**
+
+Read `$WORK_DIR/status.md` to understand what migration issues have been fixed so far. This helps identify root causes of visual regressions.
+
+Fix unchecked issues by page/route:
+
+1. **Group unchecked issues by page**
+2. **For each page with unchecked issues**:
+   - Analyze baseline and post-migration screenshots
+   - Identify cause in code (CSS changes, component API changes, etc.)
+   - Make code changes to resolve
+   - Verify:
+     - Start app **in the background** (append `&` or equivalent)
+     - Wait for server to be ready
+     - Use `playwright-mcp` to navigate to the page, take new screenshot
+     - Compare against baseline
+     - Stop the app
+   - Iterate until fixed
+   - Mark fixed issues as `[x]` in `$WORK_DIR/visual-diff-report.md`
+   - Append a brief (2-3 line) summary to `$WORK_DIR/visual-fixes.md` describing what was changed and why. Do not wait until all pages are done.
+
+**Fix ALL issues (major AND minor) before completing migration.** Do not mark minor issues as acceptable.
+
+Increment N and go back to step 1.
 
 ### Completion Checklist
 
 - [ ] Visual comparison done
-- [ ] Major regressions fixed
+- [ ] ALL visual issues fixed (all checkboxes in report are `[x]`)
 - [ ] Migration comments removed

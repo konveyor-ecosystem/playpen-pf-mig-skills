@@ -33,24 +33,45 @@ parameters:
   - key: workspace_dir
     input_type: string
     requirement: optional
-    default: "/tmp/migration-workspace"
+    default: "<not_provided>"
     description: "Path to the migration workspace directory"
 
 sub_recipes:
   - name: "project_explorer"
-    path: "./subrecipes/project-explorer.yaml"
+    path: "{{ recipe_dir }}/subrecipes/project-explorer.yaml"
+    description: "Discover project structure, build system, test commands, and lint configuration"
 
   - name: "kantra_command_builder"
-    path: "./subrecipes/kantra-command-builder.yaml"
+    path: "{{ recipe_dir }}/subrecipes/kantra-command-builder.yaml"
+    description: "Construct Kantra analyze command flags based on project type and migration goal"
 
   - name: "test_runner"
-    path: "./subrecipes/test-runner.yaml"
+    path: "{{ recipe_dir }}/subrecipes/test-runner.yaml"
+    description: "Execute test suites and report results concisely"
 
   - name: "issue_analyzer"
-    path: "./subrecipes/issue-analyzer.yaml"
+    path: "{{ recipe_dir }}/subrecipes/issue-analyzer.yaml"
+    description: "Analyze persistent issues that resist multiple fix attempts"
+
+  - name: "visual_baseline"
+    path: "{{ recipe_dir }}/subrecipes/visual-baseline.yaml"
+    description: "Discover UI components and capture screenshots to a given output directory"
+    values:
+      project_path: "{{ input_path }}"
+
+  - name: "visual_compare"
+    path: "{{ recipe_dir }}/subrecipes/visual-compare.yaml"
+    description: "Compare screenshots between baseline and post-migration directories, generate checkbox-tracked report"
+
+  - name: "visual_fix"
+    path: "{{ recipe_dir }}/subrecipes/visual-fix.yaml"
+    description: "Fix unchecked visual regression issues from the diff report"
+    values:
+      project_path: "{{ input_path }}"
+      migration_context: "{{ source_tech }} to {{ target_tech }}"
 
 instructions: |
-  You are a code migration specialist migrating from {{ source_tech }} to {{ target_tech }}.
+  You are a code migration specialist.  Follow the steps below to migrate the application at {{ input_path }} from {{ source_tech }} to {{ target_tech }}.
 
   ## Issue Sources
 
@@ -66,17 +87,6 @@ instructions: |
 
   Kantra is a static source code analysis tool that uses rules to identify migration issues in the source code.
 
-  ## Sub-Recipes
-
-  Invoke these specialized sub-recipes:
-
-  | Task | Sub-Recipe | When |
-  |------|------------|------|
-  | Discover project structure | `project_explorer` | Start of Phase 1 |
-  | Build Kantra command | `kantra_command_builder` | Phase 1, after discovery |
-  | Run tests | `test_runner` | Every validation step |
-  | Analyze stuck issues | `issue_analyzer` | Same issue appears 3+ rounds |
-
   ## User-Provided Parameters
 
   - **Source technologies**: {{ source_tech }}
@@ -85,6 +95,11 @@ instructions: |
   - **Custom rules**: {{ rules }}
   - **Enable default rulesets**: {{ enable_default_rulesets }}
   - **Workspace directory**: {{ workspace_dir }}
+
+  You have access to sub-recipes to perform specialized tasks. When you need to invoke a sub-recipe, use the `subagent` tool.
+  ```
+  subagent(subrecipe: "<name>", parameters: {param1: "value1"})
+  ```
 
   ---
 
@@ -100,14 +115,11 @@ instructions: |
      The subrecipe returns ONLY the flags. You add `--input` and `--output`.
 
   3. **Create workspace**:
+     If workspace_dir is provided, use it. Otherwise, create a temporary workspace directory:
      ```bash
-     {% if workspace_dir %}
-     mkdir -p "{{ workspace_dir }}"
-     WORK_DIR="{{ workspace_dir }}"
-     {% else %}
-     WORK_DIR=$(mktemp -d -t migration-XXXXXX)
-     {% endif %}
+     WORK_DIR=$(mktemp -d -t migration-$(date +%m_%d_%y_%H))
      ```
+     **All sub-recipe invocations below use this directory as the work directory.** All migration artifacts — Kantra output, status files, screenshots, manifests, and reports — must go inside `$WORK_DIR`. Never use the project directory as the work directory.
 
   4. **Check target technology specific guidance**: Look for `{{ recipe_dir }}/targets/<target>.md` and follow pre-migration steps.
 
@@ -120,9 +132,12 @@ instructions: |
   Run initial analysis to create the fix plan:
 
   1. Run Kantra: `kantra analyze --input "{{ input_path }}" --output "$WORK_DIR/round-1/kantra" <FLAGS>`
-  2. Run build, lint, unit tests (invoke `test_runner` for tests)
-  3. Collect ALL issues from ALL sources (see Issue Sources table)
-  4. Create `$WORK_DIR/status.md` using the template below
+  2. Parse Kantra output using the helper script:
+     - Overview: `python3 {{ recipe_dir }}/scripts/kantra_output_helper.py analyze $WORK_DIR/round-1/kantra/output.yaml`
+     - File details: `python3 {{ recipe_dir }}/scripts/kantra_output_helper.py file $WORK_DIR/round-1/kantra/output.yaml <file>`
+  3. Run build, lint, unit tests (invoke `test_runner` for tests)
+  4. Collect ALL issues from ALL sources (see Issue Sources table)
+  5. Create `$WORK_DIR/status.md` using the template below
 
   ### Status Template
 
@@ -168,7 +183,7 @@ instructions: |
   1. **Pick**: Select first incomplete group from status.md
   2. **Fix**: Apply all fixes for that group
   3. **Validate**: Run Kantra, build, lint, unit tests (invoke `test_runner`)
-  4. **Update**: Mark group done, log the round
+  4. **Update**: Mark the group's checkbox as `[x]` in status.md and log the round. **Always keep status.md up to date** — it is the source of truth for migration progress.
 
   Append to status.md:
   ```markdown
