@@ -19,7 +19,6 @@ We used the [code migration recipe](../../goose/recipes/README.md) to migrate a 
 - [Phase 4: Validate](#phase-4-validate)
   - [E2E Testing](#e2e-testing)
   - [Visual Comparison and Fix Loop](#visual-comparison-and-fix-loop)
-- [Results](#results)
 - [Running the Recipe](#running-the-recipe)
 - [Conclusions](#conclusions)
 
@@ -155,20 +154,6 @@ Key fixes the visual fix subagent applied:
 - **Missing screenshots**: Captured edit modal and delete confirmation modal screenshots that were missed in the initial post-migration capture
 
 The full list of issues and fixes is documented in [visual-diff-report.md](visual-diff-report.md) and [visual-fixes.md](visual-fixes.md).
-
----
-
-## Results
-
-| Metric | Value |
-|--------|-------|
-| Build | PASS |
-| Lint | PASS (0 errors, 0 warnings) |
-| E2E tests | PASS (51/51) |
-| Kantra issues remaining | 7 (all false positives) |
-| Visual issues found | 40 |
-| Visual issues fixed | 40 |
-| Manual intervention | None |
 
 ---
 
