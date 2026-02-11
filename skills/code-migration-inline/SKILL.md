@@ -115,7 +115,7 @@ kantra analyze --input <project> --output $WORK_DIR/round-N/kantra <FLAGS>
 ### Step 3: Create Workspace
 
 ```bash
-WORK_DIR=$(mktemp -d -t migration-XXXXXX)
+WORK_DIR=$(mktemp -d -t migration-$(date +%m_%d_%y_%H))
 ```
 
 ### Step 4: Check Target Technology Specific Guidance
@@ -132,8 +132,8 @@ Run initial analysis to create the fix plan:
 
 1. Run Kantra: `kantra analyze --input <project> --output $WORK_DIR/round-1/kantra <FLAGS>`
 2. Parse Kantra output using the helper script:
-   - Overview: `python scripts/kantra_output_helper.py analyze $WORK_DIR/round-1/kantra/output.yaml`
-   - File details: `python scripts/kantra_output_helper.py file $WORK_DIR/round-1/kantra/output.yaml <file>`
+   - Overview: `python3 scripts/kantra_output_helper.py analyze $WORK_DIR/round-1/kantra/output.yaml`
+   - File details: `python3 scripts/kantra_output_helper.py file $WORK_DIR/round-1/kantra/output.yaml <file>`
 3. Run build and lint commands
 4. Run unit tests
 5. Collect ALL issues from ALL sources (see Issue Sources table)
@@ -219,7 +219,7 @@ When an issue persists across 3+ rounds, analyze it:
 
 **Run persistent issues script:**
 ```bash
-python scripts/persistent_issues_analyzer.py $WORK_DIR
+python3 scripts/persistent_issues_analyzer.py $WORK_DIR
 ```
 
 **For each persistent issue, determine:**

@@ -236,16 +236,16 @@ Commands:
 
 Examples:
   # Get JSON summary of all issues (default)
-  python kantra_output_helper.py analyze output.yaml
+  python3 kantra_output_helper.py analyze output.yaml
 
   # Get text summary
-  python kantra_output_helper.py analyze output.yaml --format text
+  python3 kantra_output_helper.py analyze output.yaml --format text
 
   # Get issues for specific file (shows top 10 by default)
-  python kantra_output_helper.py file output.yaml src/Main.java
+  python3 kantra_output_helper.py file output.yaml src/Main.java
 
   # Get more issues for a file
-  python kantra_output_helper.py file output.yaml src/Main.java --limit 20
+  python3 kantra_output_helper.py file output.yaml src/Main.java --limit 20
 
 Workflow:
   1. Run 'analyze' to understand all issues and their scope

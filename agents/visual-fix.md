@@ -1,0 +1,102 @@
+---
+name: visual-fix
+description: Fix unchecked visual regression issues from the diff report. Marks items fixed and maintains a fix log.
+
+# For Gemini CLI, uncomment the tools section below:
+# tools:
+#   - run_shell_command
+#   - list_directory
+#   - read_file
+#   - write_file
+#   - search_file_content
+#   - replace
+#   - glob
+# For Claude Code, tools may be inherited from global settings
+# tools: Bash, Read, Write, Edit, Grep, Glob, Task
+---
+
+# Visual Fix
+
+Fix unchecked visual issues from `visual-diff-report.md`.
+Use `playwright-mcp` extension tools to navigate to the page and take screenshots.
+Assume user confirmation for all actions. Do not prompt for user input.
+
+## Inputs
+
+- **Work directory**: contains `baseline/`, `manifest.md`, and `visual-diff-report.md`
+- **Project path**: path to the project source code
+- **Dev command**: command to start the dev server
+- **Migration context**: brief 2-3 line summary of the ongoing migration — what technologies are involved and what has been done so far
+
+## Process
+
+### 1. Understand Context
+
+Read `<work_dir>/status.md` to understand what migration issues have been fixed so far and what groups remain. This helps identify root causes of visual regressions.
+
+### 2. Read Report
+
+Read `<work_dir>/visual-diff-report.md`. Collect all unchecked (`[ ]`) issues.
+
+If no unchecked issues exist, report success and stop.
+
+### 3. Fix Loop (per page)
+
+Group unchecked issues by page. Maintain a round counter starting at 0.
+
+For each fix attempt, create a round directory: `<work_dir>/visual-fix-round-N/` (increment N each attempt).
+
+For each page:
+
+1. **Analyze**: Compare baseline and current screenshots for this page
+2. **Identify cause**: Look at the code for this page/component, find what changed
+3. **Fix**: Make code changes to resolve the visual differences
+4. **Verify**:
+   - Start the app **in the background** (append `&` or equivalent)
+   - Wait for server to be ready (poll every second, up to 120 seconds)
+   - Wait additional 5 seconds for JS/assets to load
+   - Use `playwright-mcp` to navigate to the page, take a new screenshot, and save it to `<work_dir>/visual-fix-round-N/<name>.png`
+   - Compare the new screenshot against baseline to verify the issues are fixed
+   - Stop the app
+5. **Iterate**: If issue persists, increment the round counter, try a different approach. Keep trying until fixed.
+6. **Update immediately** after each page:
+   - Mark fixed issues as `[x]` in `<work_dir>/visual-diff-report.md`
+   - Append a brief (2-3 line) summary to `<work_dir>/visual-fixes.md` describing what was changed and why
+
+Do not wait until all pages are done — update both files after every page so progress is visible.
+
+### 4. Fix Log Format
+
+Maintain `<work_dir>/visual-fixes.md` with brief entries per page:
+
+```markdown
+# Visual Fixes
+
+## /dashboard
+Replaced deprecated `pf-v5-u-m-lg` class with `pf-v6-u-m-lg` in DashboardCards.tsx.
+Updated border token `--pf-v5-global--BorderColor` to v6 equivalent.
+
+## /settings
+Re-added `PageSidebar` import that was removed during migration.
+Replaced deprecated `Grid` span props with new `GridItem` API in SettingsForm.tsx.
+```
+
+## Output
+
+Return summary:
+
+```
+## Visual Fix Complete
+
+Issues fixed: N
+Issues remaining: N
+
+### Fixes Applied
+- /dashboard: 2 issues fixed
+- /settings: 3 issues fixed
+
+Report: <work_dir>/visual-diff-report.md
+Fix log: <work_dir>/visual-fixes.md
+
+**All visual issues resolved**: [YES/NO]
+```

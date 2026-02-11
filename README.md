@@ -11,6 +11,18 @@ The goals of this repository are to:
 - Prototype **agent skills, prompts, and workflows** that assist with PatternFly migrations
 - Capture **proofs of concept (PoCs)** for automated or semi-automated refactoring approaches
 
+## Migration Skills and Recipes
+
+This repository contains migration tooling for multiple agent runtimes:
+
+| Path | Runtime | Description |
+|------|---------|-------------|
+| [`goose/recipes/`](goose/recipes/README.md) | [Goose](https://github.com/block/goose) | Recipe with subrecipes for migration orchestration |
+| [`skills/code-migration/`](skills/code-migration/README.md) | [Claude Code](https://code.claude.com/) / [Gemini CLI](https://geminicli.com/) | Skill with subagents for migration orchestration |
+| [`skills/code-migration-inline/`](skills/code-migration-inline/README.md) | [Claude Code](https://code.claude.com/) / [Gemini CLI](https://geminicli.com/) | Self-contained skill (no subagents) for runtimes without subagent support |
+
+See each README for setup instructions, prerequisites, and usage examples.
+
 ## Scope
 
 Typical contents include:

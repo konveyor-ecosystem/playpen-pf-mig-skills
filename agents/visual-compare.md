@@ -1,62 +1,50 @@
 ---
 name: visual-compare
-description: Capture post-migration screenshots and compare against baseline. Use in post-migration phase after E2E tests pass.
+description: Compare screenshots between baseline and post-migration directories. Generates or updates a checkbox-tracked report.
+
+# For Gemini CLI, uncomment the tools section below:
+# tools:
+#   - run_shell_command
+#   - list_directory
+#   - read_file
+#   - write_file
+#   - search_file_content
+#   - replace
+#   - glob
+# For Claude Code, tools may be inherited from global settings
+# tools: Bash, Read, Write, Edit, Grep, Glob, Task
 ---
 
 # Visual Comparison
 
-Compare post-migration UI against baseline screenshots.
+Compare screenshots between baseline and post-migration directories. Generate or update a checkbox-tracked report.
 
 ## Inputs
 
-You receive:
-- **Work directory**: must contain `baseline/` folder with manifest
-- **Dev command**: command to start the dev server
-- **Project path**: path to the project source code
+- **Work directory**: workspace root (contains `baseline/`, `manifest.md`, and `visual-diff-report.md`)
+- **Compare directory**: directory with post-migration screenshots to compare against baseline
 
 ## Prerequisites
 
-Verify baseline exists: `<work_dir>/baseline/manifest.md`
+Verify these exist before proceeding:
+- `<work_dir>/manifest.md`
+- `<work_dir>/baseline/` with screenshots
 
-If missing, report error and stop.
+If either is missing, report error and stop.
 
 ## Process
 
-### 1. Read Baseline Manifest
+### 1. Read Manifest
 
-Read `<work_dir>/baseline/manifest.md` to get the list of routes to capture.
+Read `<work_dir>/manifest.md` to get the list of elements to compare.
 
-### 2. Start Application and Wait
+### 2. Compare Each Element
 
-**Run the dev server in the background** and determine the URL from its output:
-
-1. Start the dev server command **in the background** (append `&` or equivalent)
-2. Observe the output to find the local URL (e.g., `http://localhost:3000`)
-3. Wait for the server to respond (poll every second, up to 120 seconds)
-4. After server responds, wait additional 5 seconds for JS/assets to load
-5. **Do not proceed until server is ready.** If it doesn't start, report error and stop.
-
-### 3. Capture Post-Migration Screenshots
-
-Create directory: `<work_dir>/post-migration/`
-
-For each route in manifest, use `playwright-mcp`:
-1. `browser_navigate` to `<app_url><route>`
-2. Wait for page to stabilize
-3. `browser_take_screenshot`
-4. Save to `<work_dir>/post-migration/<route-name>.png`
-
-Use same naming as baseline.
-
-### 4. Stop Server
-
-Kill the dev server process.
-
-### 5. Compare Each Page
+For each element in the manifest, load the screenshot from `<work_dir>/baseline/` and `<compare_dir>/`.
 
 **Assume differences exist.** Actively search for problems.
 
-For each page:
+For each element:
 
 1. **Load both images**: baseline and post-migration
 2. **Describe baseline**: List what you see - sections, components, layout
@@ -73,21 +61,46 @@ For each page:
    | Colors | Background/text/borders correct? | [state: same OR describe difference] |
    | Icons | All visible and sized correctly? | [state: same OR describe difference] |
 
+**You MUST fill in the "Your Finding" column for EVERY row.** Do not skip any aspect.
+
 5. **List ALL differences found** - even small ones
 6. **Classify**:
-   - ✓ Identical - no differences
+   - ✓ Identical - no differences found in any aspect
    - ⚠️ Minor - styling changes, spacing, colors (still requires fix)
    - ❌ Major - broken layout, missing elements (requires fix)
 
 **Both minor and major issues require fixes.** Do not mark minor issues as acceptable.
 
-### 6. Create Report
+### 3. Write Report
 
-Create `<work_dir>/visual-diff-report.md` with:
-- Summary table (counts by status)
-- Page-by-page analysis with aspect tables
-- Issues to fix list
-- Recommendations
+Create or update `<work_dir>/visual-diff-report.md`.
+
+**If the report does NOT exist**, create it with all issues as unchecked:
+
+```markdown
+# Visual Comparison Report
+
+Compared: <timestamp>
+Baseline: <work_dir>/baseline
+Post-migration: <compare_dir>
+
+## Issues
+
+### /dashboard
+- [ ] Card spacing increased ~4px (⚠️ Minor)
+- [ ] Button borders slightly darker (⚠️ Minor)
+
+### /settings
+- [ ] Navigation sidebar missing (❌ Major)
+- [ ] Form layout broken - fields overlap (❌ Major)
+- [ ] Submit button not visible (❌ Major)
+```
+
+**If the report already exists**, update it:
+1. For each previously reported issue: if now fixed (screenshots match), change `[ ]` to `[x]`
+2. For any new issues found: append as `[ ]` under the appropriate page heading
+
+Pages with no issues should NOT appear in the report.
 
 ## Output
 
@@ -98,17 +111,14 @@ Return the report summary:
 
 | Status | Count |
 |--------|-------|
-| ✓ Identical | N |
+| ✓ No issues | N |
 | ⚠️ Minor | N |
 | ❌ Major | N |
+| ✅ Previously fixed | N |
 
-### Issues Found
+Unchecked issues remaining: N
 
-| Page | Issue | Severity |
-|------|-------|----------|
-...
+Report: <work_dir>/visual-diff-report.md
 
-Full report: <work_dir>/visual-diff-report.md
-
-**Action Required**: [YES - fix N major and M minor issues / NO - all pages identical]
+**Action Required**: [YES - N unchecked issues remain / NO - all resolved]
 ```

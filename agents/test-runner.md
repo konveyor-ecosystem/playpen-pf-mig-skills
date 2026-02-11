@@ -19,6 +19,11 @@ description: Execute test suites and report results. Use proactively after code 
 
 You are a test execution specialist. Run test suites and report results concisely.
 
+## Inputs
+
+- **Test command**: the test command to execute (e.g., `npm test`, `npm run test:e2e`)
+- **Test type**: type of tests (unit, integration, e2e)
+
 **Only run tests that are explicitly requested.**
 
 ## Execution

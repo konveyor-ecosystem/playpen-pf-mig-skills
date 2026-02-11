@@ -8,9 +8,13 @@ parameters:
     requirement: required
     description: "Path to the project to explore"
 
-instructions: |
+prompt: |
   You are a project discovery specialist. Quickly analyze a codebase and return actionable information about its structure.
 
+  ## Inputs
+  - **Project path**: {{ project_path }}
+
+instructions: |
   ## Tasks
 
   Identify:

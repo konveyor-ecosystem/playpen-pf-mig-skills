@@ -17,6 +17,7 @@ parameters:
     input_type: string
     requirement: optional
     description: "Path to custom Kantra rulesets"
+    default: "<none>"
 
   - key: enable_default_rulesets
     input_type: boolean
@@ -24,19 +25,19 @@ parameters:
     default: true
     description: "Enable default rulesets"
 
-instructions: |
+prompt: |
   You are a Kantra CLI specialist. Return the correct flags for `kantra analyze` based on the project and migration goal.
-
-  **You return all flags EXCEPT `--input` and `--output`** (the main agent adds those).
 
   ## Inputs
 
-  You receive:
   - **Project path**: {{ project_path }}
   - **Migration goal**: {{ migration_goal }}
   {% if custom_rules_path %}- **Custom rules path**: {{ custom_rules_path }}{% endif %}
   - **Enable default rulesets**: {{ enable_default_rulesets }}
 
+  **You return all flags EXCEPT `--input` and `--output`** (the main recipe adds those).
+
+instructions: |
   ## Process
 
   ### 1. Check Kantra Help

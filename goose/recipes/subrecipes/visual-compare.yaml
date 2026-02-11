@@ -1,88 +1,48 @@
 version: "1.0.0"
 title: "Visual Comparison"
-description: "Capture post-migration screenshots and compare against baseline. Use in post-migration phase after E2E tests pass."
+description: "Compare screenshots between baseline and post-migration directories. Generates or updates a checkbox-tracked report."
 
 parameters:
   - key: work_dir
     input_type: string
     requirement: required
-    description: "Path to the migration workspace directory (must contain baseline/)"
+    description: "Path to the migration workspace directory (contains baseline/, manifest.md)"
 
-  - key: dev_command
+  - key: compare_dir
     input_type: string
     requirement: required
-    description: "Command to start the dev server (from project discovery)"
+    description: "Directory with post-migration screenshots to compare against baseline"
 
-  - key: project_path
-    input_type: string
-    requirement: required
-    description: "Path to the project source code"
-
-instructions: |
-  You are a visual regression analyst. Compare post-migration UI against baseline screenshots.
+prompt: |
+  You are a visual regression analyst. Compare screenshots between baseline and post-migration directories.
+  Generate or update a checkbox-tracked report.
 
   ## Inputs
-
   - **Work directory**: {{ work_dir }}
-  - **Dev command**: {{ dev_command }}
-  - **Project path**: {{ project_path }}
+  - **Compare directory**: {{ compare_dir }}
 
+instructions: |
   ## Prerequisites
 
-  Verify baseline exists:
-  ```bash
-  ls {{ work_dir }}/baseline/manifest.md
-  ```
+  Verify these exist before proceeding:
+  - `{{ work_dir }}/manifest.md`
+  - `{{ work_dir }}/baseline/` with screenshots
 
-  If missing, report error and stop.
+  If either is missing, report error and stop.
 
   ## Process
 
-  ### 1. Read Baseline Manifest
+  ### 1. Read Manifest
 
-  Read `{{ work_dir }}/baseline/manifest.md` to get the list of routes to capture.
+  Read `{{ work_dir }}/manifest.md` to get the list of elements to compare.
 
-  ### 2. Start Application and Wait
+  ### 2. Compare Each Element
 
-  **Run the dev server in the background** and determine the URL from its output:
-
-  ```bash
-  cd {{ project_path }}
-  {{ dev_command }} &
-  ```
-
-  1. Run the dev command **in the background** (append `&` or equivalent)
-  2. Observe the output for the local URL (e.g., `http://localhost:3000`)
-  3. Wait for the server to be ready (poll the URL every second, up to 120 seconds)
-  4. After server responds, wait additional 5 seconds for JS/assets to load
-
-  **Important:** Do not proceed until the server is fully ready. If it doesn't start within 120 seconds, report the error and stop.
-
-  ### 3. Capture Post-Migration Screenshots
-
-  ```bash
-  mkdir -p {{ work_dir }}/post-migration
-  ```
-
-  For each route in manifest, use `playwright-mcp`:
-  1. `browser_navigate` to `<app_url><route>`
-  2. Wait for page to stabilize
-  3. `browser_take_screenshot`
-  4. Save to `{{ work_dir }}/post-migration/<route-name>.png`
-
-  Use same naming as baseline.
-
-  ### 4. Stop Server
-
-  ```bash
-  kill $DEV_PID
-  ```
-
-  ### 5. Compare Each Page
+  For each element in the manifest, load the screenshot from `{{ work_dir }}/baseline/` and `{{ compare_dir }}/`.
 
   **Assume differences exist.** Actively search for problems.
 
-  For each page:
+  For each element:
 
   1. **Load both images**: baseline and post-migration
   2. **Describe baseline**: List what you see - sections, components, layout
@@ -99,129 +59,64 @@ instructions: |
      | Colors | Background/text/borders correct? | [state: same OR describe difference] |
      | Icons | All visible and sized correctly? | [state: same OR describe difference] |
 
+  **You MUST fill in the "Your Finding" column for EVERY row.** Do not skip any aspect.
+
   5. **List ALL differences found** - even small ones
   6. **Classify**:
-     - ✓ Identical - no differences
+     - ✓ Identical - no differences found in any aspect
      - ⚠️ Minor - styling changes, spacing, colors (still requires fix)
      - ❌ Major - broken layout, missing elements (requires fix)
 
   **Both minor and major issues require fixes.** Do not mark minor issues as acceptable.
 
-  ### 6. Create Report
+  ### 3. Write Report
 
-  Create `{{ work_dir }}/visual-diff-report.md`:
+  Create or update `{{ work_dir }}/visual-diff-report.md`.
+
+  **If the report does NOT exist**, create it with all issues as unchecked:
 
   ```markdown
   # Visual Comparison Report
 
   Compared: <timestamp>
   Baseline: {{ work_dir }}/baseline
-  Post-migration: {{ work_dir }}/post-migration
+  Post-migration: {{ compare_dir }}
 
-  ## Summary
-
-  | Status | Count |
-  |--------|-------|
-  | ✓ Identical | N |
-  | ⚠️ Minor differences | N |
-  | ❌ Major regressions | N |
-
-  ## Page-by-Page Analysis
-
-  ### / (Home)
-  **Status**: ✓ Identical
-
-  | Aspect | Finding |
-  |--------|---------|
-  | Layout | Same |
-  | Navigation | Same |
-  | Components | Same |
-  | Text | Same |
-  | Spacing | Same |
-  | Colors | Same |
-  | Icons | Same |
-
-  **Assessment**: No changes detected.
-
-  ---
+  ## Issues
 
   ### /dashboard
-  **Status**: ⚠️ Minor differences
-
-  | Aspect | Finding |
-  |--------|---------|
-  | Layout | Same |
-  | Navigation | Same |
-  | Components | Same |
-  | Text | Same |
-  | Spacing | Card gaps increased by ~4px |
-  | Colors | Button borders slightly darker |
-  | Icons | Same |
-
-  **Differences**:
-  - Card spacing increased (expected PF6 change)
-  - Button border color updated
-
-  **Assessment**: Requires fix - investigate spacing and border changes.
-
-  ---
+  - [ ] Card spacing increased ~4px (⚠️ Minor)
+  - [ ] Button borders slightly darker (⚠️ Minor)
 
   ### /settings
-  **Status**: ❌ Major regression
-
-  | Aspect | Finding |
-  |--------|---------|
-  | Layout | Form layout broken - fields overlap |
-  | Navigation | Sidebar missing |
-  | Components | Submit button missing |
-  | Text | Same |
-  | Spacing | N/A - layout broken |
-  | Colors | Same |
-  | Icons | Same |
-
-  **Differences**:
-  - Navigation sidebar completely missing
-  - Form layout broken - fields overlapping
-  - Submit button not visible
-
-  **Assessment**: Requires fix. Likely CSS class changes not migrated.
-
-  ## Issues to Fix
-
-  | Page | Issue | Severity |
-  |------|-------|----------|
-  | /settings | Navigation sidebar missing | ❌ Major |
-  | /settings | Form layout broken | ❌ Major |
-  | /settings | Submit button missing | ❌ Major |
-  | /dashboard | Card spacing changed | ⚠️ Minor |
-
-  ## Recommendations
-
-  1. Fix ALL issues - both major and minor
-  2. Do not skip minor issues - they indicate unintended changes
-  3. Only mark complete when all pages are identical or intentionally changed
+  - [ ] Navigation sidebar missing (❌ Major)
+  - [ ] Form layout broken - fields overlap (❌ Major)
+  - [ ] Submit button not visible (❌ Major)
   ```
+
+  **If the report already exists**, update it:
+  1. For each previously reported issue: if now fixed (screenshots match), change `[ ]` to `[x]`
+  2. For any new issues found: append as `[ ]` under the appropriate page heading
+
+  Pages with no issues should NOT appear in the report.
 
   ## Output
 
-  Return the report summary and list of issues:
+  Return the report summary:
 
   ```
   ## Visual Comparison Complete
 
   | Status | Count |
   |--------|-------|
-  | ✓ Identical | N |
+  | ✓ No issues | N |
   | ⚠️ Minor | N |
   | ❌ Major | N |
+  | ✅ Previously fixed | N |
 
-  ### Issues Found
+  Unchecked issues remaining: N
 
-  | Page | Issue | Severity |
-  |------|-------|----------|
-  ...
+  Report: {{ work_dir }}/visual-diff-report.md
 
-  Full report: {{ work_dir }}/visual-diff-report.md
-
-  **Action Required**: [YES - fix N major and M minor issues / NO - all pages identical]
+  **Action Required**: [YES - N unchecked issues remain / NO - all resolved]
   ```
