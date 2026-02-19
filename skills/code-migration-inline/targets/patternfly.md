@@ -33,27 +33,41 @@ Discover all UI components and capture baseline screenshots.
    - Forms in modals or triggered by actions
    - Tabs, accordions, dropdowns with distinct content
 
+   **Authentication:** Check whether the application requires login. Look for login pages, auth guards, hardcoded credentials in seed files, `.env.example`, test fixtures, or README instructions. Record any credentials needed to access protected routes so they can be used during screenshot capture.
+
    **Do not skip any discoverable element.** For each element, note what triggers it and any required state/data.
 
-2. **Create manifest** - Create `$WORK_DIR/manifest.md`:
+2. **Create manifest** - Create `$WORK_DIR/manifest.md`. Each entry must describe exactly what to capture and how to reach the target state:
    ```markdown
    # UI Manifest
    Project: <project_path>
 
    ## Routes
-   | Route | Screenshot | Notes |
-   |-------|------------|-------|
-   | / | home.png | |
-   | /dashboard | dashboard.png | |
+
+   ### / → home.png
+   - **Navigate to**: root URL (`/`)
+   - **Wait for**: page content to fully render (stats, tables, lists)
+   - **Key elements**: sidebar navigation, stats cards row, data table with action buttons
+
+   ### /dashboard → dashboard.png
+   - **Navigate to**: `/dashboard`
+   - **Wait for**: all dashboard widgets to load
+   - **Key elements**: chart area, summary cards, recent activity list
 
    ## Interactive Components
-   | Type | Name | Screenshot | Trigger |
-   |------|------|------------|---------|
-   | Modal | Confirm Delete | modal-confirm-delete.png | Click delete button |
-   | Drawer | Settings | drawer-settings.png | Click gear icon |
+
+   ### Modal: Confirm Delete → modal-confirm-delete.png
+   - **Trigger**: on `/dashboard`, click the delete button on any table row
+   - **Wait for**: modal to appear and content to render
+   - **Key elements**: modal title, confirmation message, Cancel and Confirm buttons
+
+   ### Drawer: Settings → drawer-settings.png
+   - **Trigger**: click the gear icon in the top navigation
+   - **Wait for**: drawer panel to slide in and content to load
+   - **Key elements**: settings form fields, save/cancel buttons
    ```
 
-3. **Start application and wait** - Run dev server **in the background** (use command from project discovery, append `&` or equivalent). Observe output to find the local URL. Wait for server to respond (poll every second, up to 120 seconds). After server responds, wait additional 5 seconds for JS/assets to load. **Do not proceed until server is ready.**
+3. **Start application and wait** - **The application MUST be running and fully responsive before any `playwright-mcp` interaction.** Playwright operations will fail if the server is not ready. Run dev server **in the background** (append `&` or equivalent) and capture the process ID. Extract the local URL from the server output. **Poll the URL every 2 seconds, up to 120 seconds**, until it returns a successful response. **After the server responds, wait an additional 5 seconds** for JS bundles and assets to fully load. **Do not call any `playwright-mcp` tool until both checks pass.**
 
 4. **Capture screenshots** - For each element in manifest, use `playwright-mcp`:
    - Navigate to page or trigger component
@@ -110,6 +124,8 @@ Adapt based on your findings:
 
 ## Post-Migration
 
+**Visual regression testing is required.** Do not skip the visual comparison loop. The migration is incomplete until all visual issues are resolved and every checkbox in the report is checked.
+
 ### Visual Regression Loop
 
 Repeat the following loop until no unchecked issues remain. N is the fix round, starting at 0.
@@ -118,7 +134,7 @@ Repeat the following loop until no unchecked issues remain. N is the fix round, 
 
 Read `$WORK_DIR/manifest.md` (already created during pre-migration).
 
-1. **Start application and wait** - Run dev server **in the background**. Wait for server to respond. **Do not proceed until server is ready.**
+1. **Start application and wait** - **The application MUST be running and fully responsive before any `playwright-mcp` interaction.** Run dev server **in the background** (append `&`) and capture the process ID. **Poll the URL every 2 seconds, up to 120 seconds.** After the server responds, **wait an additional 5 seconds** for JS bundles and assets. **Do not call any `playwright-mcp` tool until both checks pass.**
 2. **Capture screenshots** - For each element in manifest, use `playwright-mcp`:
    - Navigate to page or trigger component
    - Wait for content to stabilize
@@ -188,8 +204,9 @@ Fix unchecked issues by page/route:
    - Identify cause in code (CSS changes, component API changes, etc.)
    - Make code changes to resolve
    - Verify:
-     - Start app **in the background** (append `&` or equivalent)
-     - Wait for server to be ready
+     **The application MUST be running and fully responsive before any `playwright-mcp` interaction.**
+     - Start app **in the background** (append `&`) and capture the process ID
+     - **Poll the URL every 2 seconds, up to 120 seconds.** After the server responds, **wait an additional 5 seconds** for JS bundles and assets. **Do not call any `playwright-mcp` tool until both checks pass.**
      - Use `playwright-mcp` to navigate to the page, take new screenshot
      - Compare against baseline
      - Stop the app

@@ -16,7 +16,7 @@ Complete BEFORE Phase 2.
 
 ### 1. Capture Visual Baseline
 
-Delegate to `visual-baseline` subagent with:
+Delegate to `visual-captures` subagent with:
 - **work directory**: the `$WORK_DIR` path created in Phase 1 (e.g., `/tmp/migration-02_10_26_14`)
 - **output directory**: `$WORK_DIR/baseline`
 - **project path**: path to the project source code
@@ -48,13 +48,15 @@ Typical order: Import paths → Component APIs → Deprecated patterns → CSS/S
 
 ## Post-Migration
 
+**Visual regression testing is required.** Do not skip the visual comparison loop. The migration is incomplete until all visual issues are resolved and every checkbox in the report is checked.
+
 ### Visual Regression Loop
 
 Repeat the following loop until no unchecked issues remain. N is the fix round, starting at 0.
 
 **Step 1: Capture screenshots**
 
-Delegate to `visual-baseline` subagent with:
+Delegate to `visual-captures` subagent with:
 - **work directory**: the `$WORK_DIR` path created in Phase 1 (same path used for baseline)
 - **output directory**: `$WORK_DIR/post-migration-N` (N = fix round, starting at 0)
 - **project path**: path to the project source code

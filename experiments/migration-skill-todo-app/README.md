@@ -48,7 +48,7 @@ A `project_explorer` subagent examines the application to discover the build sys
 
 ### Visual Baseline Capture
 
-Before any code is changed, a `visual_baseline` subagent discovers the important UI components in the application and captures screenshots of each one. The subagent produces a [manifest.md](manifest.md) that catalogs every route, interactive component, and key UI element worth tracking:
+Before any code is changed, a `visual_captures` subagent discovers the important UI components in the application and captures screenshots of each one. The subagent produces a [manifest.md](manifest.md) that catalogs every route, interactive component, and key UI element worth tracking:
 
 | Type | Examples |
 |------|----------|

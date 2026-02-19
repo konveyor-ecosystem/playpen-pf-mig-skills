@@ -53,8 +53,8 @@ sub_recipes:
     path: "{{ recipe_dir }}/subrecipes/issue-analyzer.yaml"
     description: "Analyze persistent issues that resist multiple fix attempts"
 
-  - name: "visual_baseline"
-    path: "{{ recipe_dir }}/subrecipes/visual-baseline.yaml"
+  - name: "visual_captures"
+    path: "{{ recipe_dir }}/subrecipes/visual-captures.yaml"
     description: "Discover UI components and capture screenshots to a given output directory"
     values:
       project_path: "{{ input_path }}"
@@ -226,7 +226,7 @@ instructions: |
 
   ### Target Validation
 
-  Check `{{ recipe_dir }}/targets/<target>.md` for post-migration steps (e.g., visual comparison).
+  **Follow all post-migration steps in `{{ recipe_dir }}/targets/<target>.md`. These steps are mandatory — do not skip them.** The migration is not complete until all post-migration validation passes.
 
   ### Exit Criteria
 

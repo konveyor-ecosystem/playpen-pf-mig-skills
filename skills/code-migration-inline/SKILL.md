@@ -250,7 +250,7 @@ Run E2E/behavioral tests and complete target-specific validation.
 
 ### Target Validation
 
-Check `targets/<target>.md` for post-migration steps (e.g., visual comparison for UI migrations).
+**Follow all post-migration steps in `targets/<target>.md`. These steps are mandatory — do not skip them.** The migration is not complete until all post-migration validation passes.
 
 ### Exit Criteria
 

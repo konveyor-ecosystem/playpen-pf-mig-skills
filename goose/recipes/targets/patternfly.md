@@ -16,7 +16,7 @@ Complete BEFORE Phase 2.
 
 ### 1. Capture Visual Baseline
 
-Invoke `visual_baseline` sub-recipe with:
+Invoke `visual_captures` sub-recipe with:
 - `work_dir`: the `$WORK_DIR` path created in Phase 1 (e.g., `/tmp/migration-02_10_26_14`)
 - `output_dir`: `$WORK_DIR/baseline`
 - `project_path`: path to the project
@@ -70,13 +70,15 @@ Adapt based on your findings:
 
 ## Post-Migration
 
+**Visual regression testing is required.** Do not skip the visual comparison loop. The migration is incomplete until all visual issues are resolved and every checkbox in the report is checked.
+
 ### Visual Regression Loop
 
 Repeat the following loop until no unchecked issues remain. N is the fix round, starting at 0.
 
 **Step 1: Capture screenshots**
 
-Invoke `visual_baseline` sub-recipe with:
+Invoke `visual_captures` sub-recipe with:
 - `work_dir`: the `$WORK_DIR` path created in Phase 1 (same path used for baseline)
 - `output_dir`: `$WORK_DIR/post-migration-N` (N = fix round, starting at 0)
 - `project_path`: path to the project

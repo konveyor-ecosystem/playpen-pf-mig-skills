@@ -1,5 +1,5 @@
 ---
-name: visual-baseline
+name: visual-captures
 description: Discover UI components and capture screenshots. Creates manifest on first run, reuses it on subsequent runs.
 
 # For Gemini CLI, uncomment the tools section below:
@@ -55,11 +55,13 @@ Only run if manifest does not exist.
 - **Tabs** - Tab panels with distinct content
 - **Accordions** - Expandable sections with hidden content
 
+**Authentication:** Check whether the application requires login. Look for login pages, auth guards, hardcoded credentials in seed files, `.env.example`, test fixtures, or README instructions. Record any credentials needed to access protected routes so they can be used during screenshot capture.
+
 **Do not skip any discoverable element.** For each interactive component, note:
 - What triggers it (button click, hover, etc.)
 - What state/data it needs to appear
 
-Create `<work_dir>/manifest.md`:
+Create `<work_dir>/manifest.md`. Each entry must describe exactly what to capture and how to reach the target state:
 
 ```markdown
 # UI Manifest
@@ -68,26 +70,38 @@ Project: <project_path>
 
 ## Routes
 
-| Route | Screenshot | Notes |
-|-------|------------|-------|
-| / | home.png | |
-| /dashboard | dashboard.png | |
-| /settings | settings.png | Requires mock auth |
+### / → home.png
+- **Navigate to**: root URL (`/`)
+- **Wait for**: page content to fully render (stats, tables, lists)
+- **Key elements**: sidebar navigation, stats cards row, data table with action buttons
+
+### /dashboard → dashboard.png
+- **Navigate to**: `/dashboard`
+- **Wait for**: all dashboard widgets to load
+- **Key elements**: chart area, summary cards, recent activity list
+
+### /settings → settings.png
+- **Navigate to**: `/settings`
+- **Wait for**: settings form to render
+- **Key elements**: form fields, save/cancel buttons
+- **Notes**: requires mock auth
 
 ## Interactive Components
 
-| Type | Name | Screenshot | Trigger |
-|------|------|------------|---------|
-| Modal | Confirm Delete | modal-confirm-delete.png | Click delete button on /dashboard |
-| Drawer | Settings | drawer-settings.png | Click gear icon |
-| Form | Create User | form-create-user.png | Click "Add User" on /users |
+### Modal: Confirm Delete → modal-confirm-delete.png
+- **Trigger**: on `/dashboard`, click the delete button on any table row
+- **Wait for**: modal to appear and content to render
+- **Key elements**: modal title, confirmation message, Cancel and Confirm buttons
 
-## Key Components Per Page
+### Drawer: Settings → drawer-settings.png
+- **Trigger**: click the gear icon in the top navigation
+- **Wait for**: drawer panel to slide in and content to load
+- **Key elements**: settings form fields, save/cancel buttons
 
-### /dashboard
-- Sidebar navigation
-- Stats cards row
-- Data table with action buttons
+### Form: Create User → form-create-user.png
+- **Trigger**: on `/users`, click "Add User" button
+- **Wait for**: form fields to appear
+- **Key elements**: input fields, validation messages, submit button
 ```
 
 **Naming convention:**
@@ -98,13 +112,13 @@ Project: <project_path>
 
 ### 3. Start Application and Wait
 
-**Run the dev server in the background** and determine the URL from its output:
+**The application MUST be running and fully responsive before any `playwright-mcp` interaction.** Playwright operations will fail if the server is not ready.
 
-1. Start the dev server command **in the background** (append `&` or equivalent)
-2. Observe the output to find the local URL (e.g., `http://localhost:3000`)
-3. Wait for the server to respond (poll every second, up to 120 seconds)
-4. After server responds, wait additional 5 seconds for JS/assets to load
-5. **Do not proceed until server is ready.** If it doesn't start, report error and stop.
+1. Start the dev server **in the background** (append `&` or equivalent) and capture the process ID
+2. Extract the local URL from the server output (e.g., `http://localhost:3000`)
+3. **Poll the URL every 2 seconds, up to 120 seconds**, until it returns a successful response. If it does not respond within 120 seconds, report the error and stop.
+4. **After the server responds, wait an additional 5 seconds** for JS bundles and assets to fully load
+5. **Do not call any `playwright-mcp` tool until both checks above pass.** Proceeding before the server is ready will cause screenshot failures.
 
 ### 4. Capture Screenshots
 

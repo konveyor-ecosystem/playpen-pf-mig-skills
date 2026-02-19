@@ -59,13 +59,15 @@ instructions: |
   2. **Identify cause**: Look at the code for this page/component, find what changed
   3. **Fix**: Make code changes to resolve the visual differences
   4. **Verify**:
-     - Start the app **in the background**:
+     **The application MUST be running and fully responsive before any `playwright-mcp` interaction.** Playwright operations will fail if the server is not ready.
+     - Start the app **in the background** and capture the process ID:
        ```bash
        cd {{ project_path }}
        {{ dev_command }} &
        ```
-     - Wait for server to be ready (poll every second, up to 120 seconds)
-     - Wait additional 5 seconds for JS/assets to load
+     - **Poll the URL every 2 seconds, up to 120 seconds**, until it returns a successful response. If it does not respond within 120 seconds, report the error and stop.
+     - **After the server responds, wait an additional 5 seconds** for JS bundles and assets to fully load
+     - **Do not call any `playwright-mcp` tool until both checks above pass.**
      - Use `playwright-mcp` to navigate to the page, take a new screenshot, and save it to `{{ work_dir }}/visual-fix-round-N/<name>.png`
      - Compare the new screenshot against baseline to verify the issues are fixed
      - Stop the app

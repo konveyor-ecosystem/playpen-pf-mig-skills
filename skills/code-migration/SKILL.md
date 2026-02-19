@@ -146,7 +146,7 @@ Run E2E/behavioral tests and complete target-specific validation.
 
 ### Target-Specific Validation
 
-Follow all post-migration steps in `targets/<target>.md`. These steps are mandatory, not optional.
+**Follow all post-migration steps in `targets/<target>.md`. These steps are mandatory — do not skip them.** The migration is not complete until all post-migration validation passes.
 
 ### Exit Criteria
 
