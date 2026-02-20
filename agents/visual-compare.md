@@ -32,6 +32,13 @@ Verify these exist before proceeding:
 
 If either is missing, report error and stop.
 
+## Ground Rules
+
+- **The baseline screenshot is the source of truth.** The post-migration screenshot must look identical to it.
+- **Do not rationalize differences.** If something looks different, it IS different. Do not explain away a difference as "expected due to the migration" or "acceptable styling variation."
+- **Report every visible difference**, no matter how small. a slightly different shade, a font weight change — all are differences and must be reported.
+- **When in doubt, report it.** False positives are acceptable. Missed differences are not.
+
 ## Process
 
 ### 1. Read Manifest
@@ -42,34 +49,36 @@ Read `<work_dir>/manifest.md` to get the list of elements to compare.
 
 For each element in the manifest, load the screenshot from `<work_dir>/baseline/` and `<compare_dir>/`.
 
-**Assume differences exist.** Actively search for problems.
-
 For each element:
 
 1. **Load both images**: baseline and post-migration
-2. **Describe baseline**: List what you see - sections, components, layout
-3. **Describe post-migration**: List what you see in the new screenshot
-4. **Compare each aspect** - for EACH, state what you found:
+2. **Describe baseline in detail**: Inventory every visible element — sections, components, text labels, icons, colors, borders, shadows, spacing, alignment, font sizes, background colors, divider lines, badge counts, hover states, scroll positions
+3. **Describe post-migration in detail**: Same inventory, independently — do not copy from the baseline description
+4. **Diff the two descriptions item by item**: Walk through every element you inventoried and compare. For each, explicitly state whether it is the same or different.
 
-   | Aspect | Check | Your Finding |
-   |--------|-------|--------------|
-   | Layout | Sections same position/size? | [state: same OR describe difference] |
-   | Navigation | Sidebar/header/links present? | [state: same OR describe difference] |
-   | Components | All buttons/forms/tables/cards present? | [state: same OR describe difference] |
-   | Text | Labels readable? No truncation? | [state: same OR describe difference] |
-   | Spacing | Consistent gaps? No overlaps? | [state: same OR describe difference] |
-   | Colors | Background/text/borders correct? | [state: same OR describe difference] |
-   | Icons | All visible and sized correctly? | [state: same OR describe difference] |
+**Scan for these specific difference categories:**
 
-**You MUST fill in the "Your Finding" column for EVERY row.** Do not skip any aspect.
+| Category | What to look for |
+|----------|-----------------|
+| Layout | Position shifts, size changes, reflow, element reordering |
+| Spacing | Padding, margins, gaps between elements (even 1-2px) |
+| Colors | Background, text, borders, shadows, hover states, opacity |
+| Typography | Font family, size, weight, line-height, letter-spacing |
+| Borders & dividers | Thickness, style (solid/dashed), color, radius |
+| Icons | Different icon, different size, different color, missing |
+| Components | Missing, added, or replaced components |
+| Text content | Changed labels, truncation, wrapping differences |
+| Alignment | Horizontal/vertical alignment shifts |
+| Visibility | Elements present in one but hidden/absent in the other |
 
-5. **List ALL differences found** - even small ones
-6. **Classify**:
-   - ✓ Identical - no differences found in any aspect
-   - ⚠️ Minor - styling changes, spacing, colors (still requires fix)
-   - ❌ Major - broken layout, missing elements (requires fix)
+**You MUST explicitly address EVERY category above for each element.** State "no difference" or describe the difference. Do not skip any.
 
-**Both minor and major issues require fixes.** Do not mark minor issues as acceptable.
+5. **List ALL differences found** — one bullet per difference, with specific detail (e.g., "Card background color changed from black to white")
+6. **Classify each difference**:
+   - ⚠️ Minor — styling/spacing/color changes that do not break functionality
+   - ❌ Major — missing elements, broken layout, unreadable text, functional breakage
+
+**Both minor and major issues require fixes.** Do not dismiss minor issues as acceptable.
 
 ### 3. Write Report
 

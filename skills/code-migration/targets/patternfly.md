@@ -14,23 +14,31 @@ Pre-Migration → Phase 2 (Fix Loop) → Phase 3 (E2E Tests) → Visual Comparis
 
 Complete BEFORE Phase 2.
 
-### 1. Capture Visual Baseline
+### 1. Discover UI Elements
+
+Delegate to `visual-discovery` subagent with:
+- **work directory**: the `$WORK_DIR` path created in Phase 1 (e.g., `/tmp/migration-02_10_26_14`)
+- **project path**: path to the project source code
+
+This creates `$WORK_DIR/manifest.md` with every route, interactive component, theme variant, layout mode, and UI state.
+
+### 2. Capture Visual Baseline
 
 Delegate to `visual-captures` subagent with:
-- **work directory**: the `$WORK_DIR` path created in Phase 1 (e.g., `/tmp/migration-02_10_26_14`)
+- **work directory**: the `$WORK_DIR` path created in Phase 1
 - **output directory**: `$WORK_DIR/baseline`
 - **project path**: path to the project source code
 - **dev command**: dev server command from project discovery
 
-This creates `$WORK_DIR/manifest.md` and saves screenshots to `$WORK_DIR/baseline/`.
+This captures screenshots for every entry in the manifest and saves them to `$WORK_DIR/baseline/`.
 
-### 2. Run pf-codemods
+### 3. Run pf-codemods
 
 ```bash
 npx @patternfly/pf-codemods@latest <project_path> --v6 --fix
 ```
 
-### 3. Upgrade Dependencies
+### 4. Upgrade Dependencies
 
 Check `package.json` for all `@patternfly/*` dependencies and upgrade every one of them to `^6.x`. This includes packages like `@patternfly/react-core`, `@patternfly/react-table`, `@patternfly/react-icons`, `@patternfly/patternfly`, and any others the project uses. Then run `npm install`.
 
@@ -82,11 +90,12 @@ If unchecked (`[ ]`) issues remain → continue to step 4.
 
 Delegate to `visual-fix` subagent with:
 - **work directory**: the `$WORK_DIR` path created in Phase 1
+- **post-migration directory**: `$WORK_DIR/post-migration-N`
 - **project path**: path to the project source code
 - **dev command**: dev server command from project discovery
 - **migration context**: a brief 2-3 line summary of the migration so far — include what technologies are involved and what has been done (e.g., codemods applied, which issue groups are fixed, what remains)
 
-It fixes unchecked items, marks them `[x]` in the report, and logs fixes to `$WORK_DIR/visual-fixes.md`.
+It fixes unchecked items, marks them `[x]` in the report, copies verified screenshots to the post-migration directory, and logs fixes to `$WORK_DIR/visual-fixes.md`.
 
 **Fix ALL issues (major AND minor).** Do not skip any.
 

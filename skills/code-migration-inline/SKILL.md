@@ -275,6 +275,178 @@ Update status.md:
 
 ---
 
+## Phase 4: Report
+
+Before generating the report, write the final `## Action Required` section to status.md. This must reflect the **end state** of the migration, including visual fixes.
+
+1. Read `$WORK_DIR/visual-diff-report.md` — check for any unchecked (`[ ]`) issues that remain after the visual fix loop
+2. Read `$WORK_DIR/visual-fixes.md` — understand what visual issues were fixed and how
+3. Remove any `visual_review` items from Action Required that were resolved by the visual-fix agent (i.e., the corresponding issues are now `[x]` in the diff report)
+4. Add any **new** items discovered during visual fixing that need user attention (e.g., unfixable visual differences)
+
+Append the final `## Action Required` section to status.md listing **every item the user should still review**. Use bullet format with type prefix:
+
+```markdown
+## Action Required
+
+- **Unresolved Issue**: [description] → [recommendation]
+- **False Positive**: [description] → [recommendation]
+- **Visual Review** (page: [name]): [description] → [recommendation]
+- **Manual Intervention**: [description] → [recommendation]
+```
+
+If nothing requires review:
+
+```markdown
+## Action Required
+
+None
+```
+
+### 1. Read status.md
+
+Read `$WORK_DIR/status.md` and extract:
+
+- **Complete section**: total rounds, build/test/validation status
+- **Groups**: list of groups with their completion status
+- **Group Details**: for each group — name, description, files, issues
+- **Round Log**: each round's fixed count, new issues, build/test results
+- **Action Required section**: items the user must review (unresolved issues, false positives, visual reviews, manual interventions)
+
+### 2. Read Kantra Assessment
+
+Check for the latest Kantra output directory (`$WORK_DIR/round-*/kantra/output.yaml`). If a final round exists, note any residual incidents (rule, count, reason for keeping).
+
+If no Kantra output exists, set `kantra_residual.total_incidents` to 0.
+
+### 3. Read Visual Comparison Report
+
+If `$WORK_DIR/visual-diff-report.md` exists, extract per-page results (page name, status, notes). Map unchecked items (`[ ]`) to `fail` status and checked items (`[x]`) to `pass`.
+
+### 4. List Screenshot Directories
+
+Check for `$WORK_DIR/baseline/` and `$WORK_DIR/post-migration/` directories. List filenames in each to populate the visual pages array.
+
+If neither directory exists, set `visual.has_screenshots` to `false`.
+
+### 5. Build report-data.json
+
+Create `$WORK_DIR/report-data.json` using the following schema:
+
+```json
+{
+  "migration": {
+    "source": "string",
+    "target": "string",
+    "project": "string (project path)",
+    "timestamp": "ISO 8601",
+    "workspace": "string (workspace path)"
+  },
+  "summary": {
+    "total_rounds": "number",
+    "status": "complete|incomplete",
+    "build": "PASS|FAIL",
+    "unit_tests": "PASS|FAIL|NONE",
+    "e2e_tests": "PASS|FAIL|NONE",
+    "lint": "PASS|FAIL|NONE",
+    "target_validation": "PASS|FAIL|NONE"
+  },
+  "action_required": [
+    {
+      "type": "unresolved_issue|false_positive|visual_review|manual_intervention",
+      "description": "string",
+      "recommendation": "string (optional)",
+      "details": "string (optional)",
+      "page": "string (optional, for visual_review)"
+    }
+  ],
+  "groups": [
+    {
+      "name": "string",
+      "status": "complete|incomplete",
+      "issues_fixed": "number",
+      "files": ["string"],
+      "description": "string"
+    }
+  ],
+  "rounds": [
+    {
+      "number": "number",
+      "group": "string",
+      "issues_fixed": "number",
+      "new_issues": "number",
+      "build": "PASS|FAIL",
+      "tests": "string (e.g. '265/265' or '225/262 (37 snapshot mismatches)')"
+    }
+  ],
+  "visual": {
+    "has_screenshots": "boolean",
+    "baseline_dir": "string (relative to work_dir)",
+    "post_migration_dir": "string (relative to work_dir)",
+    "pages": [
+      {
+        "name": "string",
+        "baseline": "string (filename, e.g. 'login.png')",
+        "post_migration": "string (filename, e.g. 'login.png')",
+        "status": "pass|fail|info",
+        "notes": "string"
+      }
+    ]
+  },
+  "kantra_residual": {
+    "total_incidents": "number",
+    "categories": [
+      {
+        "rule": "string",
+        "count": "number",
+        "reason": "string"
+      }
+    ]
+  }
+}
+```
+
+**Field population rules**:
+
+- `migration.source` / `migration.target`: from the source and target technologies
+- `migration.project`: the project path
+- `migration.timestamp`: current time in ISO 8601
+- `migration.workspace`: `$WORK_DIR`
+- `summary`: from the Complete section of status.md
+- `action_required`: from the Action Required section of status.md. Parse each bullet into type, description, and recommendation. If "None", use an empty array.
+- `groups`: from Groups and Group Details sections. Mark `[x]` groups as "complete", `[ ]` as "incomplete". Count issues from Group Details. Extract files list.
+- `rounds`: from Round Log entries. Parse fixed count, new issues count, build and test results.
+- `visual`: from screenshot directories and visual-diff-report.md. If no screenshots exist, set `has_screenshots` to false and omit pages.
+- `kantra_residual`: from the latest Kantra output. If 0 residual issues, set `total_incidents` to 0 and `categories` to empty array.
+
+### 6. Read Visual Fixes
+
+If `$WORK_DIR/visual-fixes.md` exists, read it to understand what visual issues were fixed and how. Use this to verify consistency of `action_required`:
+
+- If a `visual_review` item in `action_required` refers to an issue that is now `[x]` in `visual-diff-report.md`, **remove it** from `action_required` — it was fixed.
+- If `visual-diff-report.md` has unchecked (`[ ]`) issues that are **not** represented in `action_required`, **add them** as `visual_review` items.
+- If `visual-fixes.md` documents fixes that contradict notes in `action_required` (e.g., an item says "not fixable" but `visual-fixes.md` shows it was fixed), update accordingly.
+
+### 7. Verify Consistency
+
+Before writing `report-data.json`, cross-check the data:
+
+- `summary.status` should be `complete` only if all groups are complete, build passes, and tests pass
+- `action_required` should not contain items that are contradicted by other artifacts (e.g., visual issues marked as needing review but already `[x]` in the diff report)
+- `visual.pages` status values should match `visual-diff-report.md` — `[x]` → `pass`, `[ ]` → `fail`
+- Every screenshot file referenced in `visual.pages` should exist in the baseline and post-migration directories
+
+### 8. Generate HTML Report
+
+Run:
+```bash
+python3 scripts/generate_migration_report.py $WORK_DIR
+```
+
+Tell the user the path to the generated `report.html`.
+
+---
+
 ## Guidelines
 
 - **One group per round** for clear feedback

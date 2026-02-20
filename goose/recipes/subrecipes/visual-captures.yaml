@@ -1,6 +1,6 @@
 version: "1.0.0"
 title: "Screenshot Capture"
-description: "Discover UI components and capture screenshots. Creates manifest on first run, reuses it on subsequent runs."
+description: "Capture screenshots of a running application using an existing manifest. Requires manifest.md to already exist in the work directory."
 
 parameters:
   - key: work_dir
@@ -24,7 +24,7 @@ parameters:
     description: "Path to the project source code"
 
 prompt: |
-  You are a visual testing specialist. Discover UI components and capture screenshots of a running application.
+  You are a screenshot capture specialist. Capture screenshots of a running application using an existing manifest.
   Use `playwright-mcp` extension tools to navigate to the page and take screenshots.
   Assume user confirmation for all actions. Do not prompt for user input.
 
@@ -35,89 +35,17 @@ prompt: |
   - **Project path**: {{ project_path }}
 
 instructions: |
+  ## Prerequisites
+
+  `{{ work_dir }}/manifest.md` **must exist** before this sub-recipe runs. If it is missing, report an error and stop. Use the `visual_discovery` sub-recipe to create the manifest first.
+
   ## Process
 
-  ### 1. Check for Manifest
+  ### 1. Read Manifest
 
-  If `{{ work_dir }}/manifest.md` exists, skip to step 3.
+  Read `{{ work_dir }}/manifest.md` to get the full list of elements to capture. **Every entry in the manifest must be captured.** Do not skip any entry.
 
-  If it does NOT exist, proceed to step 2.
-
-  ### 2. Discover All Important UI Elements
-
-  Only run if manifest does not exist.
-
-  **Find ALL important UI elements.** This includes more than just routes:
-
-  **Routes/Pages:**
-  - Search for router config, route arrays, path definitions
-  - Check `pages/`, `views/`, `routes/`, `screens/` folders
-  - Find menus, sidebars, navbars and extract all links
-
-  **Interactive Components (not tied to routes):**
-  - **Modals/Dialogs** - Search for Modal, Dialog, Popup components and find their triggers
-  - **Drawers/Sidepanels** - Slide-out panels triggered by buttons
-  - **Forms** - Important forms in modals or triggered by actions
-  - **Dropdowns/Menus** - Complex dropdown menus with multiple options
-  - **Tabs** - Tab panels with distinct content
-  - **Accordions** - Expandable sections with hidden content
-
-  **Authentication:** Check whether the application requires login. Look for login pages, auth guards, hardcoded credentials in seed files, `.env.example`, test fixtures, or README instructions. Record any credentials needed to access protected routes so they can be used during screenshot capture.
-
-  **Do not skip any discoverable element.** For each interactive component, note:
-  - What triggers it (button click, hover, etc.)
-  - What state/data it needs to appear
-
-  Create `{{ work_dir }}/manifest.md`. Each entry must describe exactly what to capture and how to reach the target state:
-
-  ```markdown
-  # UI Manifest
-
-  Project: {{ project_path }}
-
-  ## Routes
-
-  ### / → home.png
-  - **Navigate to**: root URL (`/`)
-  - **Wait for**: page content to fully render (stats, tables, lists)
-  - **Key elements**: sidebar navigation, stats cards row, data table with action buttons
-
-  ### /dashboard → dashboard.png
-  - **Navigate to**: `/dashboard`
-  - **Wait for**: all dashboard widgets to load
-  - **Key elements**: chart area, summary cards, recent activity list
-
-  ### /settings → settings.png
-  - **Navigate to**: `/settings`
-  - **Wait for**: settings form to render
-  - **Key elements**: form fields, save/cancel buttons
-  - **Notes**: requires mock auth
-
-  ## Interactive Components
-
-  ### Modal: Confirm Delete → modal-confirm-delete.png
-  - **Trigger**: on `/dashboard`, click the delete button on any table row
-  - **Wait for**: modal to appear and content to render
-  - **Key elements**: modal title, confirmation message, Cancel and Confirm buttons
-
-  ### Drawer: Settings → drawer-settings.png
-  - **Trigger**: click the gear icon in the top navigation
-  - **Wait for**: drawer panel to slide in and content to load
-  - **Key elements**: settings form fields, save/cancel buttons
-
-  ### Form: Create User → form-create-user.png
-  - **Trigger**: on `/users`, click "Add User" button
-  - **Wait for**: form fields to appear
-  - **Key elements**: input fields, validation messages, submit button
-  ```
-
-  **Naming convention:**
-  - Routes: `/` → `home.png`, `/dashboard` → `dashboard.png`
-  - Modals: `modal-confirm-delete.png`, `modal-create-user.png`
-  - Drawers: `drawer-settings.png`
-  - Forms: `form-login.png`
-
-  ### 3. Start Application and Wait
+  ### 2. Start Application and Wait
 
   **The application MUST be running and fully responsive before any `playwright-mcp` interaction.** Playwright operations will fail if the server is not ready.
 
@@ -132,19 +60,21 @@ instructions: |
   4. **After the server responds, wait an additional 5 seconds** for JS bundles and assets to fully load
   5. **Do not call any `playwright-mcp` tool until both checks above pass.** Proceeding before the server is ready will cause screenshot failures.
 
-  ### 4. Capture Screenshots
+  ### 3. Capture Screenshots
 
   ```bash
   mkdir -p {{ output_dir }}
   ```
 
-  Read `{{ work_dir }}/manifest.md`. For each element listed, use `playwright-mcp`:
-  1. Navigate to the page or trigger the component
+  For each element in the manifest, use `playwright-mcp`:
+  1. Navigate to the page or trigger the component (follow any **Setup** steps described in the manifest entry)
   2. Wait for content to stabilize
   3. Take screenshot
   4. Save to `{{ output_dir }}/<name>.png`
 
-  ### 5. Stop Server
+  **After all captures, verify**: compare the list of `.png` files in `{{ output_dir }}` against the manifest entries. If any manifest entry was not captured, report it as an error.
+
+  ### 4. Stop Server
 
   ```bash
   kill $DEV_PID

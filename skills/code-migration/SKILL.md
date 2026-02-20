@@ -171,6 +171,40 @@ Update status.md:
 
 ---
 
+## Phase 4: Report
+
+Before generating the report, write the final `## Action Required` section to status.md. This must reflect the **end state** of the migration, including visual fixes.
+
+1. Read `$WORK_DIR/visual-diff-report.md` — check for any unchecked (`[ ]`) issues that remain after the visual fix loop
+2. Read `$WORK_DIR/visual-fixes.md` — understand what visual issues were fixed and how
+3. Remove any `visual_review` items from Action Required that were resolved by the visual-fix agent (i.e., the corresponding issues are now `[x]` in the diff report)
+4. Add any **new** items discovered during visual fixing that need user attention (e.g., unfixable visual differences)
+
+Append the final `## Action Required` section to status.md listing **every item the user should still review**. Use bullet format with type prefix:
+
+```markdown
+## Action Required
+
+- **Unresolved Issue**: [description] → [recommendation]
+- **False Positive**: [description] → [recommendation]
+- **Visual Review** (page: [name]): [description] → [recommendation]
+- **Manual Intervention**: [description] → [recommendation]
+```
+
+If nothing requires review:
+
+```markdown
+## Action Required
+
+None
+```
+
+Then delegate to `report-generator` subagent with the workspace directory path, source technology, target technology, and project path.
+
+Tell the user the path to the generated `report.html`.
+
+---
+
 ## Guidelines
 
 - **One group per round** for clear feedback

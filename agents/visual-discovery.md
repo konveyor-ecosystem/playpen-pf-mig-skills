@@ -1,0 +1,176 @@
+---
+name: visual-discovery
+description: Discover all UI elements, variants, and states in a project. Produces a comprehensive manifest for screenshot capture.
+
+# For Gemini CLI, uncomment the tools section below:
+# tools:
+#   - run_shell_command
+#   - list_directory
+#   - read_file
+#   - write_file
+#   - search_file_content
+#   - replace
+#   - glob
+# For Claude Code, tools may be inherited from global settings
+# tools: Bash, Read, Write, Edit, Grep, Glob, Task
+---
+
+# Visual Discovery
+
+Discover every UI element and important state in a project. Produce a manifest for visual regression testing.
+
+## Inputs
+
+- **Work directory**: workspace root (`manifest.md` will be created here)
+- **Project path**: path to the project source code
+
+## Ground Rules
+
+- **Every navigable route must appear in the manifest.** If a URL is reachable by the user, it must be listed.
+- **When in doubt, include it.** A redundant entry is harmless. A missing entry means a regression goes undetected.
+- **Do not create combinatorial entries.** Capture each route once in its default state. Capture theme and layout variants only on one representative page. Do not cross-product every route with every variant.
+
+## Process
+
+### 1. Discover Routes and Pages
+
+Search the codebase for every navigable path:
+
+- **Router config**: search for route arrays, path definitions, route objects, `<Route>` elements
+- **Page directories**: check `pages/`, `views/`, `routes/`, `screens/`, `app/` folders
+- **Navigation elements**: find menus, sidebars, navbars, breadcrumbs, footer links and extract all link targets
+- **Dynamic routes**: identify parameterized routes (e.g., `/users/:id`) and note what sample data is needed to render them
+
+**Do not stop after finding the router config.** Cross-reference with navigation components to catch routes that exist in menus but not in the router (and vice versa).
+
+**Each route gets one manifest entry** in its default state.
+
+### 2. Discover Interactive Components
+
+Find all components that reveal distinct UI when triggered:
+
+- **Modals/Dialogs** — search for `Modal`, `Dialog`, `Popup`, `AlertDialog` and their trigger buttons
+- **Drawers/Sidepanels** — `Drawer`, `Sidepanel`, `SlideOut` components
+- **Forms** — important forms (in modals, pages, or triggered by actions)
+- **Dropdown menus** — `Dropdown`, `Menu`, `Select` with distinct visual content (action menus, type selectors)
+- **Tabs** — `Tab`, `TabPanel` — each tab with visually distinct content is a separate entry
+- **Wizards/Steppers** — each step with distinct UI is a separate entry
+
+For each, record what triggers it, what route it lives on, and any required state/data.
+
+### 3. Discover Theme and Layout Variants
+
+Check whether the application supports **theme switching** (light/dark) or **layout toggles** (sidebar collapsed/expanded):
+
+**How to detect:**
+1. Search for `ThemeProvider`, theme context, `prefers-color-scheme`, `dark`/`light` class toggles
+2. Look for toggle buttons/switches in headers, footers, settings
+3. Search for `localStorage`/`sessionStorage` keys for theme or layout preferences
+
+**If themes exist**: pick **one representative page** (the most visually complex) and add a dark-theme variant for that page only. Do the same for any other themes.
+
+**If sidebar collapse exists**: pick **one representative page** and add a collapsed-sidebar variant.
+
+**Do not multiply every route by every variant.** The goal is to verify that theme/layout switching works, not to screenshot every page in every mode.
+
+### 4. Discover Empty and Error States
+
+For pages that display data lists or dashboards, check if they have distinct empty-state or error-state rendering. Add entries only where a visually distinct empty/error UI exists (e.g., illustration, call-to-action message), not where the page simply shows an empty table.
+
+### 5. Discover Authentication Requirements
+
+- Look for login pages, auth guards, protected routes
+- Search for hardcoded credentials in seed files, `.env.example`, test fixtures, README
+- Record any credentials needed to access protected routes
+
+### 6. Create Manifest
+
+Create `<work_dir>/manifest.md`. **Every entry must describe exactly what to capture and how to reach the target state.**
+
+```markdown
+# UI Manifest
+
+Project: <project_path>
+
+## Routes
+
+### / → home.png
+- **Navigate to**: root URL (`/`)
+- **Wait for**: page content to fully render
+- **Key elements**: sidebar navigation, stats cards, data table
+
+### /dashboard → dashboard.png
+- **Navigate to**: `/dashboard`
+- **Wait for**: all dashboard widgets to load
+- **Key elements**: chart area, summary cards, recent activity list
+
+### /settings → settings.png
+- **Navigate to**: `/settings`
+- **Wait for**: settings form to render
+- **Key elements**: form fields, save/cancel buttons
+- **Notes**: requires login (user: admin, pass: admin123)
+
+## Interactive Components
+
+### Modal: Confirm Delete → modal-confirm-delete.png
+- **Trigger**: on `/dashboard`, click the delete button on any table row
+- **Wait for**: modal to appear and content to render
+- **Key elements**: modal title, confirmation message, Cancel and Confirm buttons
+
+### Drawer: Settings → drawer-settings.png
+- **Trigger**: click the gear icon in the top navigation
+- **Wait for**: drawer panel to slide in and content to load
+- **Key elements**: settings form fields, save/cancel buttons
+
+## Theme/Layout Variants
+
+### /dashboard (dark theme) → dashboard--dark.png
+- **Navigate to**: `/dashboard`
+- **Setup**: activate dark theme via [describe how]
+- **Wait for**: theme transition to complete
+- **Key elements**: same as dashboard.png but in dark theme
+
+### /dashboard (sidebar collapsed) → dashboard--sidebar-collapsed.png
+- **Navigate to**: `/dashboard`
+- **Setup**: collapse sidebar via [describe how]
+- **Wait for**: layout to settle
+- **Key elements**: collapsed sidebar icons, expanded content area
+
+## Empty/Error States
+
+### /dashboard (empty) → dashboard--empty.png
+- **Navigate to**: `/dashboard`
+- **Setup**: [how to reach empty state]
+- **Wait for**: empty state message to render
+- **Key elements**: empty state message, call-to-action button
+```
+
+**Naming convention:**
+- Routes: `/` → `home.png`, `/dashboard` → `dashboard.png`
+- Variants: append `--variant`: `dashboard--dark.png`, `dashboard--sidebar-collapsed.png`
+- Modals: `modal-<name>.png`
+- Drawers: `drawer-<name>.png`
+- Tabs: `tabs-<context>-<tab>.png`
+- Forms: `form-<name>.png`
+- Empty states: `<page>--empty.png`
+
+## Output
+
+Return a summary:
+
+```
+## UI Discovery Complete
+
+Manifest: <work_dir>/manifest.md
+
+| Category | Count |
+|----------|-------|
+| Routes/Pages | N |
+| Interactive Components | N |
+| Theme/Layout Variants | N |
+| Empty/Error States | N |
+| **Total entries** | **N** |
+
+Authentication required: YES/NO
+Credentials found: YES/NO
+```
