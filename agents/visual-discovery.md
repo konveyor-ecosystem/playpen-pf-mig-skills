@@ -47,14 +47,14 @@ Search the codebase for every navigable path:
 
 ### 2. Discover Interactive Components
 
-Find all components that reveal distinct UI when triggered:
+Find important components that reveal distinct UI when triggered. **Group similar instances and pick one representative per type** — if an app has 5 modals that all use the same `Modal` component with different form fields, capture one. A visual regression in the shared component will show up in any instance.
 
-- **Modals/Dialogs** — search for `Modal`, `Dialog`, `Popup`, `AlertDialog` and their trigger buttons
-- **Drawers/Sidepanels** — `Drawer`, `Sidepanel`, `SlideOut` components
-- **Forms** — important forms (in modals, pages, or triggered by actions)
-- **Dropdown menus** — `Dropdown`, `Menu`, `Select` with distinct visual content (action menus, type selectors)
-- **Tabs** — `Tab`, `TabPanel` — each tab with visually distinct content is a separate entry
-- **Wizards/Steppers** — each step with distinct UI is a separate entry
+- **Modals/Dialogs** — find all modals, then group by visual structure. Capture **one representative per distinct layout** (e.g., one form modal, one confirmation modal). Do not capture every individual "Add Credential: Network", "Add Credential: Satellite", etc. separately if they share the same modal component with different fields.
+- **Drawers/Sidepanels** — one representative if they share a component
+- **Dropdown menus** — capture **one representative per distinct type** (e.g., one action menu kebab, one type selector dropdown). Do not capture every individual kebab menu on every page.
+- **Forms** — one representative if multiple forms share the same layout
+- **Tabs** — only if tab panels have visually distinct structure (not just different data)
+- **Wizards/Steppers** — one representative step if steps share the same layout
 
 For each, record what triggers it, what route it lives on, and any required state/data.
 
@@ -73,17 +73,13 @@ Check whether the application supports **theme switching** (light/dark) or **lay
 
 **Do not multiply every route by every variant.** The goal is to verify that theme/layout switching works, not to screenshot every page in every mode.
 
-### 4. Discover Empty and Error States
-
-For pages that display data lists or dashboards, check if they have distinct empty-state or error-state rendering. Add entries only where a visually distinct empty/error UI exists (e.g., illustration, call-to-action message), not where the page simply shows an empty table.
-
-### 5. Discover Authentication Requirements
+### 4. Discover Authentication Requirements
 
 - Look for login pages, auth guards, protected routes
 - Search for hardcoded credentials in seed files, `.env.example`, test fixtures, README
 - Record any credentials needed to access protected routes
 
-### 6. Create Manifest
+### 5. Create Manifest
 
 Create `<work_dir>/manifest.md`. **Every entry must describe exactly what to capture and how to reach the target state.**
 
@@ -136,13 +132,6 @@ Project: <project_path>
 - **Wait for**: layout to settle
 - **Key elements**: collapsed sidebar icons, expanded content area
 
-## Empty/Error States
-
-### /dashboard (empty) → dashboard--empty.png
-- **Navigate to**: `/dashboard`
-- **Setup**: [how to reach empty state]
-- **Wait for**: empty state message to render
-- **Key elements**: empty state message, call-to-action button
 ```
 
 **Naming convention:**
@@ -152,7 +141,6 @@ Project: <project_path>
 - Drawers: `drawer-<name>.png`
 - Tabs: `tabs-<context>-<tab>.png`
 - Forms: `form-<name>.png`
-- Empty states: `<page>--empty.png`
 
 ## Output
 
@@ -168,7 +156,6 @@ Manifest: <work_dir>/manifest.md
 | Routes/Pages | N |
 | Interactive Components | N |
 | Theme/Layout Variants | N |
-| Empty/Error States | N |
 | **Total entries** | **N** |
 
 Authentication required: YES/NO

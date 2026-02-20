@@ -27,13 +27,12 @@ Find every UI element and important state that needs to be captured. **Every nav
 - **Do not stop after finding the router config.** Cross-reference with navigation components to catch routes that exist in menus but not in the router (and vice versa).
 - **Each route gets one manifest entry** in its default state.
 
-**Interactive Components:**
-- Modals/Dialogs and their triggers
-- Drawers/Sidepanels
-- Forms (in modals, pages, or triggered by actions)
-- Dropdown menus with distinct visual content (action menus, type selectors)
-- Tabs — each tab with visually distinct content is a separate entry
-- Wizards/Steppers — each step with distinct UI is a separate entry
+**Interactive Components — group similar instances and pick one representative per type.** If an app has 5 modals using the same component with different fields, capture one. A regression in the shared component will show up in any instance.
+- Modals/Dialogs — **one representative per distinct layout** (e.g., one form modal, one confirmation modal). Do not capture every variation separately.
+- Drawers/Sidepanels — one representative if they share a component
+- Dropdown menus — **one representative per distinct type** (e.g., one kebab menu, one type selector). Not every individual menu.
+- Forms — one representative if multiple forms share the same layout
+- Tabs — only if tab panels have visually distinct structure
 
 **Theme and Layout Variants:**
 Check whether the application supports theme switching (light/dark) or layout toggles (sidebar collapsed/expanded). Search for `ThemeProvider`, theme context, `prefers-color-scheme`, `dark`/`light` class toggles, toggle buttons in headers/footers, `localStorage`/`sessionStorage` keys.
@@ -41,9 +40,6 @@ Check whether the application supports theme switching (light/dark) or layout to
 - **If themes exist**: pick **one representative page** (the most visually complex) and add a dark-theme variant for that page only.
 - **If sidebar collapse exists**: pick **one representative page** and add a collapsed-sidebar variant.
 - **Do not multiply every route by every variant.**
-
-**Empty/Error States:**
-For pages with data lists or dashboards, add entries only where a visually distinct empty/error UI exists (illustration, call-to-action), not where the page simply shows an empty table.
 
 **Authentication:** Check whether the application requires login. Look for login pages, auth guards, hardcoded credentials in seed files, `.env.example`, test fixtures, or README instructions. Record any credentials needed.
 
@@ -79,16 +75,9 @@ Project: <project_path>
 - **Wait for**: theme transition to complete
 - **Key elements**: same as dashboard.png but in dark theme
 
-## Empty/Error States
-
-### /dashboard (empty) → dashboard--empty.png
-- **Navigate to**: `/dashboard`
-- **Setup**: [how to reach empty state]
-- **Wait for**: empty state message to render
-- **Key elements**: empty state message, call-to-action button
 ```
 
-**Naming**: `/` → `home.png`, `/dashboard` → `dashboard.png`. Variants: `dashboard--dark.png`, `dashboard--sidebar-collapsed.png`. Components: `modal-<name>.png`, `drawer-<name>.png`, `tabs-<context>-<tab>.png`, `form-<name>.png`. Empty states: `<page>--empty.png`.
+**Naming**: `/` → `home.png`, `/dashboard` → `dashboard.png`. Variants: `dashboard--dark.png`, `dashboard--sidebar-collapsed.png`. Components: `modal-<name>.png`, `drawer-<name>.png`, `tabs-<context>-<tab>.png`, `form-<name>.png`.
 
 ### 2. Capture Visual Baseline
 
@@ -173,11 +162,16 @@ Compare `$WORK_DIR/baseline/` against `$WORK_DIR/post-migration-N/`.
 **Ground rules for comparison:**
 - **The baseline screenshot is the source of truth.** The post-migration screenshot must look identical to it.
 - **Do not rationalize differences.** If something looks different, it IS different. Do not explain away a difference as "expected due to the migration" or "acceptable styling variation." You have no context about what the migration should change visually — your only job is to detect what changed.
-- **Report every visible difference**, no matter how small. A 1px shift, a slightly different shade, a font weight change — all are differences and must be reported.
+- **Report every visible difference**, no matter how small. A slightly different shade, a font weight change — all are differences and must be reported.
 - **When in doubt, report it.** False positives are acceptable. Missed differences are not.
+- **You MUST visually inspect every screenshot yourself.** Do not write scripts, use PIL, ImageMagick, or any automated pixel-diffing tool as a substitute for looking at the images. You are a multimodal model — read the image files directly and describe what you see.
+- **Compare regions independently.** A page has distinct regions (masthead, sidebar, content area, modals). Each region may have a different theme/color independently. Check each region's colors against the baseline — do not summarize the page as "all dark" or "all light."
 
-For each element in manifest:
+First, for each manifest entry verify that **both** baseline and post-migration screenshots exist. If a post-migration screenshot is missing, report it as `❌ Major`.
+
+For each element in manifest where both screenshots exist:
 1. **Load both images** (baseline and post-migration)
+1a. **Verify page content matches the manifest description.** If the post-migration screenshot shows wrong content (e.g., a 404 page instead of the expected page, empty state when data was expected), report as `❌ Major`.
 2. **Describe baseline in detail**: Inventory every visible element — sections, components, text labels, icons, colors, borders, shadows, spacing, alignment, font sizes, background colors, divider lines, badge counts, hover states, scroll positions
 3. **Describe post-migration in detail**: Same inventory, independently — do not copy from the baseline description
 4. **Diff the two descriptions item by item**: Walk through every element you inventoried and compare. For each, explicitly state whether it is the same or different.
@@ -232,7 +226,8 @@ If unchecked (`[ ]`) issues remain → continue to step 4.
 **Ground rules for fixing:**
 - **The baseline screenshot is the source of truth.** The goal is to make post-migration screenshots look identical to baseline. Do not decide that a difference is "acceptable" or "expected."
 - **Do not rationalize differences.** If the baseline shows X and the current screenshot shows Y, that is a difference to fix — regardless of whether the migration "should" have changed it.
-- **Every reported issue must be fixed.** Do not close an issue as "won't fix" or "by design."
+- **Never dismiss the baseline as wrong or anomalous.** The baseline was captured from the working pre-migration application. If the baseline shows light content with a dark sidebar, that is the correct state to match.
+- **Compare regions independently.** A page has distinct regions (masthead, sidebar, content area, modals). If the baseline sidebar is dark but the content area is light, the fix must reproduce that exact combination — not make everything uniformly dark or light.
 - **Verify fixes against baseline, not against your expectations.** After making a fix, compare the new screenshot to the baseline screenshot — not to what you think it should look like.
 
 Read `$WORK_DIR/status.md` to understand what migration issues have been fixed so far. This helps identify root causes of visual regressions.

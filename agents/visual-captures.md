@@ -58,9 +58,18 @@ For each element in the manifest, use `playwright-mcp`:
 3. Take screenshot
 4. Save to `<output_dir>/<name>.png`
 
-**After all captures, verify**: compare the list of `.png` files in `<output_dir>` against the manifest entries. If any manifest entry was not captured, report it as an error.
+### 4. Verify All Captures
 
-### 4. Stop Server
+After all captures, compare the list of `.png` files in `<output_dir>` against the manifest entries.
+
+**Every manifest entry must have a corresponding screenshot file.** If any are missing:
+1. List the missing entries
+2. Retry capturing them (re-navigate, re-trigger)
+3. If they still cannot be captured, **stop and report the failure** — do not proceed with missing screenshots
+
+**Also verify each screenshot shows the correct content** by reading each captured image and confirming it matches the manifest's description (Key elements, page title, expected components). If a screenshot shows the wrong page (e.g., a 404 page instead of the expected content, or an empty state instead of populated data), it must be re-captured.
+
+### 5. Stop Server
 
 Kill the dev server process. *This is important*
 

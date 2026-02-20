@@ -36,22 +36,27 @@ If either is missing, report error and stop.
 
 - **The baseline screenshot is the source of truth.** The post-migration screenshot must look identical to it.
 - **Do not rationalize differences.** If something looks different, it IS different. Do not explain away a difference as "expected due to the migration" or "acceptable styling variation."
-- **Report every visible difference**, no matter how small. a slightly different shade, a font weight change — all are differences and must be reported.
+- **Report every visible difference**, no matter how small. A slightly different shade, a font weight change — all are differences and must be reported.
 - **When in doubt, report it.** False positives are acceptable. Missed differences are not.
+- **You MUST visually inspect every screenshot yourself.** Do not write scripts, use PIL, ImageMagick, or any automated pixel-diffing tool as a substitute for looking at the images. You are a multimodal model — read the image files directly and describe what you see. Automated tools miss structural and content differences.
+- **Compare regions independently.** A page has distinct regions (masthead, sidebar, content area, modals). Each region may have a different theme/color independently. Check each region's colors against the baseline — do not summarize the page as "all dark" or "all light."
 
 ## Process
 
-### 1. Read Manifest
+### 1. Read Manifest and Verify Coverage
 
 Read `<work_dir>/manifest.md` to get the list of elements to compare.
 
+For each manifest entry, verify that **both** `<work_dir>/baseline/<name>.png` and `<compare_dir>/<name>.png` exist. If a post-migration screenshot is missing for a manifest entry, report it as a `❌ Major` issue (missing screenshot).
+
 ### 2. Compare Each Element
 
-For each element in the manifest, load the screenshot from `<work_dir>/baseline/` and `<compare_dir>/`.
+For each element in the manifest where both screenshots exist, load the screenshot from `<work_dir>/baseline/` and `<compare_dir>/`.
 
 For each element:
 
 1. **Load both images**: baseline and post-migration
+1a. **Verify page content matches the manifest description.** Check that the screenshot shows the correct page/component described in the manifest (correct title, expected elements, correct state). If the post-migration screenshot shows wrong content (e.g., a 404 page instead of the expected page, a different page entirely, empty state when data was expected), report it as a `❌ Major` issue immediately.
 2. **Describe baseline in detail**: Inventory every visible element — sections, components, text labels, icons, colors, borders, shadows, spacing, alignment, font sizes, background colors, divider lines, badge counts, hover states, scroll positions
 3. **Describe post-migration in detail**: Same inventory, independently — do not copy from the baseline description
 4. **Diff the two descriptions item by item**: Walk through every element you inventoried and compare. For each, explicitly state whether it is the same or different.
