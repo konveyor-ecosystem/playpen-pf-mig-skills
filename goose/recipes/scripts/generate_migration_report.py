@@ -2,13 +2,14 @@
 """
 Generate a self-contained HTML migration report from report-data.json.
 
-Reads structured migration data and produces an HTML report with three sections:
-Action Required, What Was Done, and Visual Comparison.
+Reads structured migration data and produces an HTML report with tabs:
+Migration Summary, Action Required, UI Issues Summary, and Visual Comparison.
 """
 
 import json
 import base64
 import argparse
+import re
 import sys
 from pathlib import Path
 from datetime import datetime
@@ -98,7 +99,7 @@ def render_action_required(items):
     return "\n".join(cards)
 
 
-def render_what_was_done(data):
+def render_migration_summary(data):
     summary = data.get("summary", {})
     groups = data.get("groups", [])
     rounds = data.get("rounds", [])
@@ -120,17 +121,17 @@ def render_what_was_done(data):
     # Groups table
     groups_html = ""
     if groups:
-        groups_html = '<h3>Groups</h3><table><thead><tr><th>Group</th><th>Status</th><th>Issues Fixed</th><th>Description</th></tr></thead><tbody>'
+        groups_html = '<h3>Issue Groups Fixed</h3><table><thead><tr><th>Group</th><th>Status</th><th>Issues Fixed</th><th>Description</th></tr></thead><tbody>'
         for g in groups:
             groups_html += f'<tr><td>{g.get("name", "")}</td><td>{status_badge(g.get("status", "incomplete"))}</td>'
             groups_html += f'<td>{g.get("issues_fixed", 0)}</td><td>{g.get("description", "")}</td></tr>'
         groups_html += '</tbody></table>'
 
-    # Round log
+    # Iteration log
     rounds_html = ""
     if rounds:
-        rounds_html = '<h3>Round Log</h3><details><summary>Show all rounds</summary><table>'
-        rounds_html += '<thead><tr><th>Round</th><th>Group</th><th>Fixed</th><th>New Issues</th><th>Build</th><th>Tests</th></tr></thead><tbody>'
+        rounds_html = '<h3>Fix Iteration Logs</h3><details><summary>Show all iterations</summary><table>'
+        rounds_html += '<thead><tr><th>Iteration</th><th>Group</th><th>Fixed</th><th>New Issues</th><th>Build</th><th>Tests</th></tr></thead><tbody>'
         for r in rounds:
             rounds_html += f'<tr><td>{r.get("number", "")}</td><td>{r.get("group", "")}</td>'
             rounds_html += f'<td>{r.get("issues_fixed", 0)}</td><td>{r.get("new_issues", 0)}</td>'
@@ -147,6 +148,92 @@ def render_what_was_done(data):
         kantra_html += '</tbody></table>'
 
     return f"{grid}{groups_html}{rounds_html}{kantra_html}"
+
+
+def markdown_to_html(md_text):
+    """Minimal markdown to HTML for rendering visual-diff-report.md."""
+    html_lines = []
+    in_list = False
+
+    for line in md_text.split("\n"):
+        stripped = line.strip()
+
+        if not stripped:
+            if in_list:
+                html_lines.append("</ul>")
+                in_list = False
+            html_lines.append("")
+            continue
+
+        # Headings
+        if stripped.startswith("### "):
+            if in_list:
+                html_lines.append("</ul>")
+                in_list = False
+            html_lines.append(f"<h4>{stripped[4:]}</h4>")
+            continue
+        if stripped.startswith("## "):
+            if in_list:
+                html_lines.append("</ul>")
+                in_list = False
+            html_lines.append(f"<h3>{stripped[3:]}</h3>")
+            continue
+        if stripped.startswith("# "):
+            if in_list:
+                html_lines.append("</ul>")
+                in_list = False
+            html_lines.append(f"<h2>{stripped[2:]}</h2>")
+            continue
+
+        # Horizontal rule
+        if stripped == "---":
+            if in_list:
+                html_lines.append("</ul>")
+                in_list = False
+            html_lines.append("<hr>")
+            continue
+
+        # List items (checkbox or plain)
+        if stripped.startswith("- "):
+            if not in_list:
+                html_lines.append("<ul>")
+                in_list = True
+            content = stripped[2:]
+            # Checkbox rendering
+            if content.startswith("[x] "):
+                content = f'<input type="checkbox" checked disabled> {content[4:]}'
+            elif content.startswith("[ ] "):
+                content = f'<input type="checkbox" disabled> {content[4:]}'
+            # Bold
+            content = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', content)
+            # Inline code
+            content = re.sub(r'`(.+?)`', r'<code>\1</code>', content)
+            html_lines.append(f"<li>{content}</li>")
+            continue
+
+        # Plain paragraph
+        if in_list:
+            html_lines.append("</ul>")
+            in_list = False
+        # Bold
+        stripped = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', stripped)
+        # Inline code
+        stripped = re.sub(r'`(.+?)`', r'<code>\1</code>', stripped)
+        html_lines.append(f"<p>{stripped}</p>")
+
+    if in_list:
+        html_lines.append("</ul>")
+
+    return "\n".join(html_lines)
+
+
+def render_ui_issues_summary(work_dir):
+    diff_report_path = Path(work_dir) / "visual-diff-report.md"
+    if not diff_report_path.exists():
+        return '<p class="muted">No visual comparison report found.</p>'
+
+    md_text = diff_report_path.read_text(encoding="utf-8")
+    return f'<div class="md-content">{markdown_to_html(md_text)}</div>'
 
 
 def render_visual_comparison(visual, work_dir):
@@ -210,20 +297,24 @@ def generate_html(data, work_dir):
     target = migration.get("target", "Unknown")
     status = summary.get("status", "incomplete")
     timestamp = migration.get("timestamp", datetime.now().isoformat())
-    total_rounds = summary.get("total_rounds", 0)
 
     try:
         ts_display = datetime.fromisoformat(timestamp.replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M")
     except Exception:
         ts_display = timestamp
 
+    summary_html = render_migration_summary(data)
     action_html = render_action_required(data.get("action_required", []))
-    done_html = render_what_was_done(data)
+    ui_issues_html = render_ui_issues_summary(work_dir)
     visual_html = render_visual_comparison(data.get("visual"), work_dir)
 
     has_visual = data.get("visual", {}).get("has_screenshots", False)
-    visual_tab = f'<button class="tab" onclick="switchTab(\'visual\')">Visual Comparison</button>' if has_visual else ""
+    visual_tab = '<button class="tab" onclick="switchTab(\'visual\')">Visual Comparison</button>' if has_visual else ""
     visual_section = f'<div id="visual" class="tab-content">{visual_html}</div>' if has_visual else ""
+
+    has_ui_issues = (Path(work_dir) / "visual-diff-report.md").exists()
+    ui_issues_tab = '<button class="tab" onclick="switchTab(\'ui-issues\')">UI Issues Summary</button>' if has_ui_issues else ""
+    ui_issues_section = f'<div id="ui-issues" class="tab-content">{ui_issues_html}</div>' if has_ui_issues else ""
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -270,6 +361,16 @@ def generate_html(data, work_dir):
   .screenshot img {{ width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; }}
   .notes {{ color: #6b7280; font-size: 14px; margin-bottom: 12px; }}
   .muted {{ color: #9ca3af; font-style: italic; }}
+  .md-content {{ background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }}
+  .md-content h2 {{ font-size: 20px; margin: 24px 0 12px; color: #1e293b; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; }}
+  .md-content h3 {{ font-size: 16px; margin: 16px 0 8px; color: #334155; }}
+  .md-content h4 {{ font-size: 14px; margin: 12px 0 6px; color: #475569; font-family: monospace; }}
+  .md-content ul {{ margin: 0 0 12px 20px; }}
+  .md-content li {{ margin-bottom: 6px; font-size: 14px; }}
+  .md-content li input[type="checkbox"] {{ margin-right: 6px; }}
+  .md-content code {{ background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 13px; }}
+  .md-content hr {{ border: none; border-top: 1px solid #e5e7eb; margin: 16px 0; }}
+  .md-content p {{ margin-bottom: 8px; font-size: 14px; }}
   @media print {{
     body {{ background: white; }}
     .container {{ max-width: none; padding: 0; }}
@@ -288,24 +389,26 @@ def generate_html(data, work_dir):
     <div class="header-meta">
       <span>{source} &rarr; {target}</span>
       <span>{status_badge(status)}</span>
-      <span>{total_rounds} rounds</span>
       <span>{ts_display}</span>
     </div>
   </header>
 
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('action')">Action Required</button>
-    <button class="tab" onclick="switchTab('done')">What Was Done</button>
+    <button class="tab active" onclick="switchTab('summary')">Migration Summary</button>
+    <button class="tab" onclick="switchTab('action')">Action Required</button>
+    {ui_issues_tab}
     {visual_tab}
   </div>
 
-  <div id="action" class="tab-content active" data-title="Action Required">
+  <div id="summary" class="tab-content active" data-title="Migration Summary">
+    {summary_html}
+  </div>
+
+  <div id="action" class="tab-content" data-title="Action Required">
     {action_html}
   </div>
 
-  <div id="done" class="tab-content" data-title="What Was Done">
-    {done_html}
-  </div>
+  {ui_issues_section}
 
   {visual_section}
 
