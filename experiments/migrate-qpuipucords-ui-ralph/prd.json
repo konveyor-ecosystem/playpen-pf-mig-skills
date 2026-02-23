@@ -1,0 +1,199 @@
+{
+  "project": "quipucords-ui",
+  "branchName": "ralph/pf6-migration-quipucords-ui",
+  "description": "Migrate quipucords-ui from PatternFly 5 to PatternFly 6 — update dependencies, run codemods, fix all breaking component/CSS/token changes, and verify all tests pass",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Update Dependencies and Run Codemods",
+      "description": "As a developer, I want to update all PatternFly packages to v6 and run automated codemods so that mechanical transformations are applied before manual work begins.",
+      "acceptanceCriteria": [
+        "All @patternfly/* packages in package.json updated to latest 6.x (all using same minor version)",
+        "npm install completes successfully",
+        "Main codemods applied: NODE_OPTIONS=--max-old-space-size=4096 npx @patternfly/pf-codemods@latest ./src --v6 --fix",
+        "Class name updater applied: npx @patternfly/class-name-updater ./src --v6 --fix",
+        "CSS vars updater applied: npx @patternfly/css-vars-updater ./src --fix",
+        "Codemod output reviewed and committed as a checkpoint",
+        "Remaining TypeScript errors from npm run test:types are recorded for subsequent stories"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "Run dry run first (without --fix) to preview changes. Use npm info @patternfly/react-core versions to find latest v6. Codemods handle: prop renames (isActive→isClicked), component restructuring hints, CSS class/variable updates, some color token replacements (others become --pf-t--temp--dev--tbd placeholders)."
+    },
+    {
+      "id": "US-002",
+      "title": "Fix Core Layout — Masthead, Page, Navigation, Sidebar",
+      "description": "As a developer, I want to fix the main application layout components that changed structurally in PF6 so that the app shell renders correctly.",
+      "acceptanceCriteria": [
+        "MastheadBrand renamed to MastheadLogo; new MastheadBrand wraps MastheadLogo; both MastheadToggle and MastheadBrand inside MastheadMain",
+        "Page prop 'header' renamed to 'masthead'",
+        "isTertiaryNavGrouped renamed to isHorizontalSubnavGrouped; tertiaryNav renamed to horizontalSubnav (if used)",
+        "PageSidebar 'theme' prop removed; Nav variant='tertiary' changed to 'horizontal-subnav'; Nav 'theme' prop removed (if present)",
+        "CSS in viewLayoutToolbar.css: all pf-v5- prefixes updated to pf-v6-; --pf-v5- CSS variables updated to PF6 equivalents",
+        "Base CSS import in src/app.tsx verified for PF6 path",
+        "Tests updated and snapshots regenerated: npx jest --roots=./src -u --testPathPattern viewLayout",
+        "npm run test:types passes",
+        "Layout-related tests pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Files: src/components/viewLayout/viewLayout.tsx, viewLayoutToolbar.tsx, viewLayoutToolbar.css, and __tests__/. Check avatar styling override in CSS for PF6 compatibility."
+    },
+    {
+      "id": "US-003",
+      "title": "Migrate EmptyState Components",
+      "description": "As a developer, I want to replace all EmptyStateHeader and EmptyStateIcon usage with the PF6 EmptyState API so that empty state displays compile and render correctly.",
+      "acceptanceCriteria": [
+        "No imports of EmptyStateHeader or EmptyStateIcon remain in any file",
+        "titleText and headingLevel are props on EmptyState (not on a child component)",
+        "icon prop on EmptyState receives the icon component reference directly (not a JSX element)",
+        "EmptyStateBody, EmptyStateFooter, EmptyStateActions remain as children",
+        "All related test files updated and snapshots regenerated",
+        "npm run test:types passes",
+        "EmptyState-related tests pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "Files: src/views/sources/viewSourcesList.tsx, src/views/scans/showScansModal.tsx, src/views/scans/viewScansList.tsx, src/views/credentials/viewCredentialsList.tsx, src/views/notFound/notFound.tsx, src/components/errorMessage/errorMessage.tsx, src/vendor/react-table-batteries/tackle2-ui-legacy/components/TableControls/NoDataEmptyState.tsx, StateError.tsx. PF6 pattern: <EmptyState titleText=\"Title\" headingLevel=\"h4\" icon={CubesIcon}>."
+    },
+    {
+      "id": "US-004",
+      "title": "Migrate Text/TextContent to Content Component",
+      "description": "As a developer, I want to replace all Text, TextContent, TextList, and TextListItem usage with the PF6 Content component so that text rendering compiles correctly.",
+      "acceptanceCriteria": [
+        "No imports of Text, TextContent, TextList, TextListItem, TextVariants, TextListVariants, or TextListItemVariants remain",
+        "Content and ContentVariants imported from @patternfly/react-core where needed",
+        "<TextContent> replaced with <Content>; <Text component> replaced with <Content component>",
+        "<TextList> replaced with <Content component={ContentVariants.ul}>; <TextListItem> replaced with <Content component='li'>",
+        "isVisited replaced with isVisitedLink; isPlain replaced with isPlainList (if used)",
+        "Tests updated and snapshots regenerated",
+        "npm run test:types passes",
+        "About modal tests pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "Files: src/components/aboutModal/aboutModal.tsx + any other files using Text/TextContent. Search entire src/ for these imports."
+    },
+    {
+      "id": "US-005",
+      "title": "Migrate Modal Components",
+      "description": "As a developer, I want to migrate all Modal usage to the PF6 Modal API so that all dialogs compile and function correctly.",
+      "acceptanceCriteria": [
+        "All Modal imports reference PF6 Modal (not deprecated path)",
+        "variant prop values match PF6 ModalVariant enum",
+        "title prop updated to titleText if PF6 API requires it",
+        "onClose callback signature verified against PF6 API",
+        "appendTo usage reviewed (PF6 Modal renders to document.body by default)",
+        "AboutModal (PfAboutModal alias) verified as exported from @patternfly/react-core in PF6",
+        "Tests updated — modal rendering tests may need { hidden: true } or baseElement queries",
+        "All affected snapshots regenerated",
+        "npm run test:types passes",
+        "All modal-related tests pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "10 source files: src/components/aboutModal/aboutModal.tsx, src/components/viewLayout/viewLayoutToolbar.tsx, src/views/sources/addSourceModal.tsx, addSourcesScanModal.tsx, showSourceConnectionsModal.tsx, src/views/scans/showScansModal.tsx, showAggregateReportModal.tsx, src/views/credentials/addCredentialModal.tsx, viewCredentialsList.tsx, src/views/scans/viewScansList.tsx."
+    },
+    {
+      "id": "US-006",
+      "title": "Migrate Button, FormGroup, and Miscellaneous Component Changes",
+      "description": "As a developer, I want to fix remaining component API changes not handled by codemods so that all component props match PF6 expectations.",
+      "acceptanceCriteria": [
+        "Button: icons passed as children moved to icon prop; isActive renamed to isClicked (if used)",
+        "FormGroup: labelIcon prop renamed to labelHelp in all form components",
+        "HelperTextItem: hasIcon and isDynamic props removed",
+        "Checkbox/Radio: isLabelBeforeButton replaced with labelPosition='start' (if used)",
+        "MenuToggle: icons use icon prop instead of children (if applicable)",
+        "NavItem: hasNavLinkWrapper prop removed (if used)",
+        "Title component API verified against PF6",
+        "All related tests updated and snapshots regenerated",
+        "npm run test:types passes",
+        "All affected component tests pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "Search all files for <Button usage and verify icon placement. PF6 pattern: <Button variant='plain' icon={<TimesIcon />} /> instead of <Button variant='plain'><TimesIcon /></Button>."
+    },
+    {
+      "id": "US-007",
+      "title": "Migrate Vendor Code — React Table Batteries and Deprecated Select",
+      "description": "As a developer, I want to migrate the vendored react-table-batteries code and replace all deprecated Select components with PF6 composable Select so that filter controls compile and work correctly.",
+      "acceptanceCriteria": [
+        "No imports from @patternfly/react-core/deprecated remain in vendor code",
+        "SelectFilterControl.tsx rewritten to use composable Select (Select, SelectOption, SelectList, MenuToggle, MenuToggleElement from @patternfly/react-core)",
+        "MultiselectFilterControl.tsx rewritten to use composable Select with hasCheckbox and isSelected on SelectOption",
+        "FilterToolbar.tsx no longer imports SelectOptionProps from deprecated path",
+        "select-overrides.css updated with PF6 class selectors or removed if no longer needed",
+        "EmptyState in vendor TableControls confirmed fixed from US-003",
+        "All other PF5-specific patterns in vendor code resolved",
+        "Tests updated and snapshots regenerated",
+        "npm run test:types passes",
+        "Vendor-related tests pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Files: src/vendor/react-table-batteries/tackle2-ui-legacy/components/FilterToolbar/MultiselectFilterControl.tsx, SelectFilterControl.tsx, FilterToolbar.tsx, select-overrides.css, and TableControls/NoDataEmptyState.tsx, StateError.tsx. Single-select uses MenuToggle+SelectList. Multi-select uses hasCheckbox+isSelected on SelectOption."
+    },
+    {
+      "id": "US-008",
+      "title": "Migrate Application Select/Dropdown Components",
+      "description": "As a developer, I want to migrate remaining Select and Dropdown components in the main application code so that all interactive controls use PF6 APIs.",
+      "acceptanceCriteria": [
+        "SimpleDropdown: if using old Dropdown API, migrated to PF6 composable Dropdown (Dropdown, DropdownItem, DropdownList, MenuToggle)",
+        "TypeAheadCheckboxes: if using deprecated Select with typeahead, migrated to PF6 composable Select with TextInput in toggle",
+        "ActionMenu: Dropdown/MenuToggle usage is PF6 compatible; EllipsisVIcon uses icon prop on MenuToggle",
+        "No imports from @patternfly/react-core/deprecated remain in application component code",
+        "All related tests updated and snapshots regenerated",
+        "npm run test:types passes",
+        "Component tests pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "Files: src/components/simpleDropdown/simpleDropdown.tsx, src/components/typeAheadCheckboxes/typeaheadCheckboxes.tsx, src/components/actionMenu/actionMenu.tsx + related tests."
+    },
+    {
+      "id": "US-009",
+      "title": "CSS Cleanup, Token Resolution, and Styling Fixes",
+      "description": "As a developer, I want to resolve all remaining CSS and design token issues so that no PF5 references or placeholder tokens remain.",
+      "acceptanceCriteria": [
+        "Zero --pf-t--temp--dev--tbd placeholder tokens remain in any file",
+        "Zero pf-v5- class name references remain in any source file",
+        "Zero --pf-v5- CSS variable references remain in any source file",
+        "Custom CSS overrides reviewed and updated: viewLayoutToolbar.css, showSourceConnectionsModal.css, select-overrides.css, app.css",
+        "PatternFly CSS import paths verified in app.tsx",
+        "@patternfly/react-tokens imports updated to t_ prefix naming (e.g. t_global_spacer_sm)",
+        "Any hardcoded pixel breakpoint values in JS/TS converted to rem (divide by 16)",
+        "npm run test:types passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "For each --pf-t--temp--dev--tbd placeholder: read the comment noting the original PF5 token, find closest PF6 semantic token from https://www.patternfly.org/tokens/all-patternfly-tokens, replace the placeholder. Files: src/app.css, src/components/viewLayout/viewLayoutToolbar.css, src/views/sources/showSourceConnectionsModal.css, src/vendor/.../select-overrides.css."
+    },
+    {
+      "id": "US-010",
+      "title": "Test Suite Fixes and Final Verification",
+      "description": "As a developer, I want all 33 test files to pass and the application to build successfully so that the migration is complete and verified.",
+      "acceptanceCriteria": [
+        "npm run test:types passes with zero errors",
+        "npm run test:lint passes with zero errors",
+        "npm run test:ci-coverage passes — all 33 test files green",
+        "Coverage thresholds met: branches ≥60%, functions ≥80%, lines ≥80%, statements ≥80%",
+        "npm run build completes successfully",
+        "npm run test:integration passes (if applicable)",
+        "No snapshot files contain stale PF5 references",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "Common fixes: snapshot failures (delete and regenerate with npx jest -u), query failures from changed DOM structure/class names, portal rendering (use { hidden: true } or screen.getByRole for Select/Dropdown/Modal content), import failures from removed components, @types mismatches."
+    }
+  ]
+}
