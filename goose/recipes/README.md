@@ -11,7 +11,7 @@ A [Goose recipe](https://block.github.io/goose/docs/guides/recipes/recipe-refere
 
 ### Playwright MCP Setup
 
-The visual regression subrecipes (`visual_baseline`, `visual_compare`, `visual_fix`) require the [Microsoft Playwright MCP server](https://github.com/microsoft/playwright-mcp) for browser automation. Enable it via:
+The visual regression subrecipes (`visual_captures`, `visual_compare`, `visual_fix`) require the [Microsoft Playwright MCP server](https://github.com/microsoft/playwright-mcp) for browser automation. Enable it via:
 
 ```bash
 goose configure
@@ -40,7 +40,7 @@ The recipe delegates specialized tasks to [subrecipes](https://block.github.io/g
 | `kantra_command_builder` | Builds the correct `kantra analyze` flags for the project |
 | `test_runner` | Runs test suites and reports results |
 | `issue_analyzer` | Analyzes issues that persist across 3+ fix rounds |
-| `visual_baseline` | Discovers UI components and captures screenshots to a given directory |
+| `visual_captures` | Discovers UI components and captures screenshots to a given directory |
 | `visual_compare` | Compares baseline and post-migration screenshots, generates checkbox-tracked report |
 | `visual_fix` | Fixes unchecked visual regression issues from the diff report |
 

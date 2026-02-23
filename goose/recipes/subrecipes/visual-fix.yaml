@@ -23,6 +23,11 @@ parameters:
     requirement: required
     description: "Brief 2-3 line summary of the ongoing migration — what technologies are involved and what has been done so far"
 
+  - key: post_migration_dir
+    input_type: string
+    requirement: required
+    description: "Path to the current post-migration screenshot directory (e.g., work_dir/post-migration-0)"
+
 prompt: |
   You are a visual regression fixer. Fix unchecked visual issues from the diff report.
   Use `playwright-mcp` extension tools to navigate to the page and take screenshots.
@@ -30,11 +35,20 @@ prompt: |
 
   ## Inputs
   - **Work directory**: {{ work_dir }}
+  - **Post-migration directory**: {{ post_migration_dir }}
   - **Dev command**: {{ dev_command }}
   - **Project path**: {{ project_path }}
   - **Migration context**: {{ migration_context }}
 
 instructions: |
+  ## Ground Rules
+
+  - **The baseline screenshot is the source of truth.** The goal is to make post-migration screenshots look identical to baseline. Do not decide that a difference is "acceptable" or "expected."
+  - **Do not rationalize differences.** If the baseline shows X and the current screenshot shows Y, that is a difference to fix — regardless of whether the migration "should" have changed it.
+  - **Never dismiss the baseline as wrong or anomalous.** The baseline was captured from the working pre-migration application. Do not claim baseline screenshots are "inconsistent" or "captured incorrectly." If the baseline shows light content with a dark sidebar, that is the correct state to match.
+  - **Compare regions independently.** A page has distinct regions (masthead, sidebar, content area, modals). Each region may have different styling. If the baseline sidebar is dark but the content area is light, the fix must reproduce that exact combination — not make everything uniformly dark or light.
+  - **Verify fixes against baseline, not against your expectations.** After making a fix, compare the new screenshot to the baseline screenshot — not to what you think it should look like.
+
   ## Process
 
   ### 1. Understand Context
@@ -55,26 +69,29 @@ instructions: |
 
   For each page:
 
-  1. **Analyze**: Compare baseline and current screenshots for this page
-  2. **Identify cause**: Look at the code for this page/component, find what changed
-  3. **Fix**: Make code changes to resolve the visual differences
+  1. **Analyze**: Load the baseline screenshot and the current screenshot for this page. Describe what is different — do not assume you already know from the report alone; look at the actual images.
+  2. **Identify cause**: Look at the code for this page/component, find what changed. Trace the visual difference to a specific code change (CSS property, component prop, class name, design token, etc.).
+  3. **Fix**: Make code changes to resolve the visual differences. The fix must make the current rendering match the baseline — not some other "correct" state.
   4. **Verify**:
-     - Start the app **in the background**:
+     **The application MUST be running and fully responsive before any `playwright-mcp` interaction.** Playwright operations will fail if the server is not ready.
+     - Start the app **in the background** and capture the process ID:
        ```bash
        cd {{ project_path }}
        {{ dev_command }} &
        ```
-     - Wait for server to be ready (poll every second, up to 120 seconds)
-     - Wait additional 5 seconds for JS/assets to load
+     - **Poll the URL every 2 seconds, up to 120 seconds**, until it returns a successful response. If it does not respond within 120 seconds, report the error and stop.
+     - **After the server responds, wait an additional 5 seconds** for JS bundles and assets to fully load
+     - **Do not call any `playwright-mcp` tool until both checks above pass.**
      - Use `playwright-mcp` to navigate to the page, take a new screenshot, and save it to `{{ work_dir }}/visual-fix-round-N/<name>.png`
-     - Compare the new screenshot against baseline to verify the issues are fixed
+     - Compare the new screenshot against the **baseline** screenshot to verify the issues are fixed. Do not compare against the previous post-migration screenshot.
      - Stop the app
-  5. **Iterate**: If issue persists, increment the round counter, try a different approach. Keep trying until fixed.
-  6. **Update immediately** after each page:
+  5. **Iterate**: If the issue persists (the new screenshot still differs from baseline), increment the round counter, try a different approach. Keep trying until fixed.
+  6. **Update immediately** after each page — **write `visual-fixes.md` first**, before any other update, so partial progress is preserved if the agent fails midway:
+     - **First**: append a brief (2-3 line) summary to `{{ work_dir }}/visual-fixes.md` describing what was changed and why (or noting the issue was unfixable and why)
+     - Copy the verified screenshot to the post-migration directory: `cp {{ work_dir }}/visual-fix-round-N/<name>.png {{ post_migration_dir }}/<name>.png`
      - Mark fixed issues as `[x]` in `{{ work_dir }}/visual-diff-report.md`
-     - Append a brief (2-3 line) summary to `{{ work_dir }}/visual-fixes.md` describing what was changed and why
 
-  Do not wait until all pages are done — update both files after every page so progress is visible.
+  Do not wait until all pages are done — update all files after every page so progress is visible.
 
   ### 4. Fix Log Format
 

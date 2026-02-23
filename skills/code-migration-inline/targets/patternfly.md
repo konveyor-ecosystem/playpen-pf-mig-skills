@@ -14,57 +14,85 @@ Pre-Migration → Phase 2 (Fix Loop) → Phase 3 (E2E Tests) → Visual Comparis
 
 Complete BEFORE Phase 2.
 
-### 1. Capture Visual Baseline
+### 1. Discover UI Elements
 
-Discover all UI components and capture baseline screenshots.
+Find every UI element and important state that needs to be captured. **Every navigable route must appear in the manifest. When in doubt, include it. Do not create combinatorial entries — capture each route once in its default state and theme/layout variants only on one representative page.**
 
-**Steps:**
+**Routes/Pages:**
+- Search for router config, route arrays, path definitions, `<Route>` elements
+- Check `pages/`, `views/`, `routes/`, `screens/`, `app/` folders
+- Find menus, sidebars, navbars, breadcrumbs, footer links and extract all link targets
+- Identify parameterized routes and note sample data needed
+- Find error pages (404, 500, error boundary)
+- **Do not stop after finding the router config.** Cross-reference with navigation components to catch routes that exist in menus but not in the router (and vice versa).
+- **Each route gets one manifest entry** in its default state.
 
-1. **Discover all UI elements** - Find ALL important elements (not just routes):
+**Interactive Components — group similar instances and pick one representative per type.** If an app has 5 modals using the same component with different fields, capture one. A regression in the shared component will show up in any instance.
+- Modals/Dialogs — **one representative per distinct layout** (e.g., one form modal, one confirmation modal). Do not capture every variation separately.
+- Drawers/Sidepanels — one representative if they share a component
+- Dropdown menus — **one representative per distinct type** (e.g., one kebab menu, one type selector). Not every individual menu.
+- Forms — one representative if multiple forms share the same layout
+- Tabs — only if tab panels have visually distinct structure
 
-   **Routes/Pages:**
-   - Search for router config, route arrays, path definitions
-   - Check `pages/`, `views/`, `routes/`, `screens/` folders
-   - Find menus, sidebars, navbars and extract all links
+**Theme and Layout Variants:**
+Check whether the application supports theme switching (light/dark) or layout toggles (sidebar collapsed/expanded). Search for `ThemeProvider`, theme context, `prefers-color-scheme`, `dark`/`light` class toggles, toggle buttons in headers/footers, `localStorage`/`sessionStorage` keys.
 
-   **Interactive Components:**
-   - Modals/Dialogs and their triggers
-   - Drawers/Sidepanels
-   - Forms in modals or triggered by actions
-   - Tabs, accordions, dropdowns with distinct content
+- **If themes exist**: pick **one representative page** (the most visually complex) and add a dark-theme variant for that page only.
+- **If sidebar collapse exists**: pick **one representative page** and add a collapsed-sidebar variant.
+- **Do not multiply every route by every variant.**
 
-   **Do not skip any discoverable element.** For each element, note what triggers it and any required state/data.
+**Authentication:** Check whether the application requires login. Look for login pages, auth guards, hardcoded credentials in seed files, `.env.example`, test fixtures, or README instructions. Record any credentials needed.
 
-2. **Create manifest** - Create `$WORK_DIR/manifest.md`:
-   ```markdown
-   # UI Manifest
-   Project: <project_path>
+Create `$WORK_DIR/manifest.md`. Each entry must describe exactly what to capture and how to reach the target state:
+```markdown
+# UI Manifest
+Project: <project_path>
 
-   ## Routes
-   | Route | Screenshot | Notes |
-   |-------|------------|-------|
-   | / | home.png | |
-   | /dashboard | dashboard.png | |
+## Routes
 
-   ## Interactive Components
-   | Type | Name | Screenshot | Trigger |
-   |------|------|------------|---------|
-   | Modal | Confirm Delete | modal-confirm-delete.png | Click delete button |
-   | Drawer | Settings | drawer-settings.png | Click gear icon |
-   ```
+### / → home.png
+- **Navigate to**: root URL (`/`)
+- **Wait for**: page content to fully render
+- **Key elements**: sidebar navigation, stats cards, data table
 
-3. **Start application and wait** - Run dev server **in the background** (use command from project discovery, append `&` or equivalent). Observe output to find the local URL. Wait for server to respond (poll every second, up to 120 seconds). After server responds, wait additional 5 seconds for JS/assets to load. **Do not proceed until server is ready.**
+### /dashboard → dashboard.png
+- **Navigate to**: `/dashboard`
+- **Wait for**: all dashboard widgets to load
+- **Key elements**: chart area, summary cards, recent activity list
 
-4. **Capture screenshots** - For each element in manifest, use `playwright-mcp`:
-   - Navigate to page or trigger component
+## Interactive Components
+
+### Modal: Confirm Delete → modal-confirm-delete.png
+- **Trigger**: on `/dashboard`, click delete button on any table row
+- **Wait for**: modal to appear and content to render
+- **Key elements**: modal title, confirmation message, Cancel and Confirm buttons
+
+## Theme/Layout Variants
+
+### /dashboard (dark theme) → dashboard--dark.png
+- **Navigate to**: `/dashboard`
+- **Setup**: activate dark theme via [describe how]
+- **Wait for**: theme transition to complete
+- **Key elements**: same as dashboard.png but in dark theme
+
+```
+
+**Naming**: `/` → `home.png`, `/dashboard` → `dashboard.png`. Variants: `dashboard--dark.png`, `dashboard--sidebar-collapsed.png`. Components: `modal-<name>.png`, `drawer-<name>.png`, `tabs-<context>-<tab>.png`, `form-<name>.png`.
+
+### 2. Capture Visual Baseline
+
+1. **Start application and wait** - **The application MUST be running and fully responsive before any `playwright-mcp` interaction.** Playwright operations will fail if the server is not ready. Run dev server **in the background** (append `&` or equivalent) and capture the process ID. Extract the local URL from the server output. **Poll the URL every 2 seconds, up to 120 seconds**, until it returns a successful response. **After the server responds, wait an additional 5 seconds** for JS bundles and assets to fully load. **Do not call any `playwright-mcp` tool until both checks pass.**
+
+2. **Capture screenshots** - For each element in manifest, use `playwright-mcp`:
+   - Navigate to page or trigger component (follow any **Setup** steps in the manifest entry)
    - Wait for content to stabilize
    - Take screenshot → save to `$WORK_DIR/baseline/<name>.png`
 
-5. **Stop application**
+3. **Verify** - Compare the list of `.png` files in `$WORK_DIR/baseline/` against manifest entries. Every manifest entry must have a corresponding screenshot.
 
-**Naming**: `/` → `home.png`, `/dashboard` → `dashboard.png`. Components: `modal-<name>.png`, `drawer-<name>.png`, `form-<name>.png`
+4. **Stop application**
 
-### 2. Run pf-codemods
+### 3. Run pf-codemods
 
 ```bash
 npx @patternfly/pf-codemods@latest <project_path> --v6 --fix
@@ -72,7 +100,7 @@ npx @patternfly/pf-codemods@latest <project_path> --v6 --fix
 
 This auto-fixes many PF5→PF6 issues. Some will still need manual fixes.
 
-### 3. Upgrade Dependencies
+### 4. Upgrade Dependencies
 
 Check `package.json` for all `@patternfly/*` dependencies and upgrade every one of them to `^6.x`. This includes packages like `@patternfly/react-core`, `@patternfly/react-table`, `@patternfly/react-icons`, `@patternfly/patternfly`, and any others the project uses. Then run `npm install`.
 
@@ -110,6 +138,8 @@ Adapt based on your findings:
 
 ## Post-Migration
 
+**Visual regression testing is required.** Do not skip the visual comparison loop. The migration is incomplete until all visual issues are resolved and every checkbox in the report is checked.
+
 ### Visual Regression Loop
 
 Repeat the following loop until no unchecked issues remain. N is the fix round, starting at 0.
@@ -118,7 +148,7 @@ Repeat the following loop until no unchecked issues remain. N is the fix round, 
 
 Read `$WORK_DIR/manifest.md` (already created during pre-migration).
 
-1. **Start application and wait** - Run dev server **in the background**. Wait for server to respond. **Do not proceed until server is ready.**
+1. **Start application and wait** - **The application MUST be running and fully responsive before any `playwright-mcp` interaction.** Run dev server **in the background** (append `&`) and capture the process ID. **Poll the URL every 2 seconds, up to 120 seconds.** After the server responds, **wait an additional 5 seconds** for JS bundles and assets. **Do not call any `playwright-mcp` tool until both checks pass.**
 2. **Capture screenshots** - For each element in manifest, use `playwright-mcp`:
    - Navigate to page or trigger component
    - Wait for content to stabilize
@@ -129,29 +159,44 @@ Read `$WORK_DIR/manifest.md` (already created during pre-migration).
 
 Compare `$WORK_DIR/baseline/` against `$WORK_DIR/post-migration-N/`.
 
-**Assume differences exist.** Actively search for problems.
+**Ground rules for comparison:**
+- **The baseline screenshot is the source of truth.** The post-migration screenshot must look identical to it.
+- **Do not rationalize differences.** If something looks different, it IS different. Do not explain away a difference as "expected due to the migration" or "acceptable styling variation." You have no context about what the migration should change visually — your only job is to detect what changed.
+- **Report every visible difference**, no matter how small. A slightly different shade, a font weight change — all are differences and must be reported.
+- **When in doubt, report it.** False positives are acceptable. Missed differences are not.
+- **You MUST visually inspect every screenshot yourself.** Do not write scripts, use PIL, ImageMagick, or any automated pixel-diffing tool as a substitute for looking at the images. You are a multimodal model — read the image files directly and describe what you see.
+- **Compare regions independently.** A page has distinct regions (masthead, sidebar, content area, modals). Each region may have a different theme/color independently. Check each region's colors against the baseline — do not summarize the page as "all dark" or "all light."
 
-For each element in manifest:
-- Load both images (baseline and post-migration)
-- Describe what you see in each
-- Compare each aspect:
+First, for each manifest entry verify that **both** baseline and post-migration screenshots exist. If a post-migration screenshot is missing, report it as `❌ Major`.
 
-  | Aspect | Check | Your Finding |
-  |--------|-------|--------------|
-  | Layout | Sections same position/size? | [state: same OR describe difference] |
-  | Navigation | Sidebar/header/links present? | [state: same OR describe difference] |
-  | Components | All buttons/forms/tables/cards present? | [state: same OR describe difference] |
-  | Text | Labels readable? No truncation? | [state: same OR describe difference] |
-  | Spacing | Consistent gaps? No overlaps? | [state: same OR describe difference] |
-  | Colors | Background/text/borders correct? | [state: same OR describe difference] |
-  | Icons | All visible and sized correctly? | [state: same OR describe difference] |
+For each element in manifest where both screenshots exist:
+1. **Load both images** (baseline and post-migration)
+1a. **Verify page content matches the manifest description.** If the post-migration screenshot shows wrong content (e.g., a 404 page instead of the expected page, empty state when data was expected), report as `❌ Major`.
+2. **Describe baseline in detail**: Inventory every visible element — sections, components, text labels, icons, colors, borders, shadows, spacing, alignment, font sizes, background colors, divider lines, badge counts, hover states, scroll positions
+3. **Describe post-migration in detail**: Same inventory, independently — do not copy from the baseline description
+4. **Diff the two descriptions item by item**: Walk through every element you inventoried and compare. For each, explicitly state whether it is the same or different.
 
-**You MUST fill in the "Your Finding" column for EVERY row.** Do not skip any aspect.
+**Scan for these specific difference categories:**
 
-- List ALL differences found - even small ones
-- Classify: ✓ Identical / ⚠️ Minor (requires fix) / ❌ Major (requires fix)
+| Category | What to look for |
+|----------|-----------------|
+| Layout | Position shifts, size changes, reflow, element reordering |
+| Spacing | Padding, margins, gaps between elements (even 1-2px) |
+| Colors | Background, text, borders, shadows, hover states, opacity |
+| Typography | Font family, size, weight, line-height, letter-spacing |
+| Borders & dividers | Thickness, style (solid/dashed), color, radius |
+| Icons | Different icon, different size, different color, missing |
+| Components | Missing, added, or replaced components |
+| Text content | Changed labels, truncation, wrapping differences |
+| Alignment | Horizontal/vertical alignment shifts |
+| Visibility | Elements present in one but hidden/absent in the other |
 
-**Both minor and major issues require fixes.** Do not mark minor issues as acceptable.
+**You MUST explicitly address EVERY category above for each element.** State "no difference" or describe the difference. Do not skip any.
+
+- List ALL differences found — one bullet per difference, with specific detail (e.g., "Card header padding changed from ~16px to ~12px", not "spacing changed")
+- Classify each difference: ⚠️ Minor (styling/spacing/color, does not break functionality) / ❌ Major (missing elements, broken layout, functional breakage)
+
+**Both minor and major issues require fixes.** Do not dismiss minor issues as acceptable.
 
 **Create or update report** - Write `$WORK_DIR/visual-diff-report.md` with checkbox-tracked issues:
 
@@ -178,26 +223,36 @@ If unchecked (`[ ]`) issues remain → continue to step 4.
 
 **Step 4: Fix**
 
+**Ground rules for fixing:**
+- **The baseline screenshot is the source of truth.** The goal is to make post-migration screenshots look identical to baseline. Do not decide that a difference is "acceptable" or "expected."
+- **Do not rationalize differences.** If the baseline shows X and the current screenshot shows Y, that is a difference to fix — regardless of whether the migration "should" have changed it.
+- **Never dismiss the baseline as wrong or anomalous.** The baseline was captured from the working pre-migration application. If the baseline shows light content with a dark sidebar, that is the correct state to match.
+- **Compare regions independently.** A page has distinct regions (masthead, sidebar, content area, modals). If the baseline sidebar is dark but the content area is light, the fix must reproduce that exact combination — not make everything uniformly dark or light.
+- **Verify fixes against baseline, not against your expectations.** After making a fix, compare the new screenshot to the baseline screenshot — not to what you think it should look like.
+
 Read `$WORK_DIR/status.md` to understand what migration issues have been fixed so far. This helps identify root causes of visual regressions.
 
 Fix unchecked issues by page/route:
 
 1. **Group unchecked issues by page**
 2. **For each page with unchecked issues**:
-   - Analyze baseline and post-migration screenshots
-   - Identify cause in code (CSS changes, component API changes, etc.)
-   - Make code changes to resolve
+   - Load the baseline screenshot and the current screenshot. Describe what is different — do not assume you already know from the report alone; look at the actual images.
+   - Identify cause in code — trace the visual difference to a specific code change (CSS property, component prop, class name, design token, etc.)
+   - Make code changes to resolve. The fix must make the current rendering match the baseline.
    - Verify:
-     - Start app **in the background** (append `&` or equivalent)
-     - Wait for server to be ready
+     **The application MUST be running and fully responsive before any `playwright-mcp` interaction.**
+     - Start app **in the background** (append `&`) and capture the process ID
+     - **Poll the URL every 2 seconds, up to 120 seconds.** After the server responds, **wait an additional 5 seconds** for JS bundles and assets. **Do not call any `playwright-mcp` tool until both checks pass.**
      - Use `playwright-mcp` to navigate to the page, take new screenshot
-     - Compare against baseline
+     - Compare the new screenshot against the **baseline** screenshot. Do not compare against the previous post-migration screenshot.
      - Stop the app
-   - Iterate until fixed
+   - If the issue persists (new screenshot still differs from baseline), try a different approach. Keep trying until fixed.
+   - **First**: append a brief (2-3 line) summary to `$WORK_DIR/visual-fixes.md` describing what was changed and why (or noting the issue was unfixable and why). Write this before any other update so partial progress is preserved if the agent fails midway.
+   - Copy the verified screenshot to the post-migration directory: `cp` the screenshot to `$WORK_DIR/post-migration-N/<name>.png`
    - Mark fixed issues as `[x]` in `$WORK_DIR/visual-diff-report.md`
-   - Append a brief (2-3 line) summary to `$WORK_DIR/visual-fixes.md` describing what was changed and why. Do not wait until all pages are done.
+   - Do not wait until all pages are done.
 
-**Fix ALL issues (major AND minor) before completing migration.** Do not mark minor issues as acceptable.
+**Fix ALL issues (major AND minor) before completing migration.** Do not dismiss minor issues as acceptable.
 
 Increment N and go back to step 1.
 

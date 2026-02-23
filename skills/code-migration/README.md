@@ -55,7 +55,7 @@ This skill delegates specialized tasks to [subagents](https://code.claude.com/do
 | `kantra-command-builder` | Builds the correct `kantra analyze` flags for the project |
 | `test-runner` | Runs test suites and reports results |
 | `issue-analyzer` | Analyzes issues that persist across 3+ fix rounds |
-| `visual-baseline` | Discovers UI components and captures screenshots to a given directory |
+| `visual-captures` | Discovers UI components and captures screenshots to a given directory |
 | `visual-compare` | Compares baseline and post-migration screenshots, generates checkbox-tracked report |
 | `visual-fix` | Fixes unchecked visual regression issues from the diff report |
 
