@@ -17,7 +17,7 @@
         "Remaining TypeScript errors from npm run test:types are recorded for subsequent stories"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "Run dry run first (without --fix) to preview changes. Use npm info @patternfly/react-core versions to find latest v6. Codemods handle: prop renames (isActive→isClicked), component restructuring hints, CSS class/variable updates, some color token replacements (others become --pf-t--temp--dev--tbd placeholders)."
     },
     {
@@ -37,7 +37,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Files: src/components/viewLayout/viewLayout.tsx, viewLayoutToolbar.tsx, viewLayoutToolbar.css, and __tests__/. Check avatar styling override in CSS for PF6 compatibility."
     },
     {
@@ -55,7 +55,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Files: src/views/sources/viewSourcesList.tsx, src/views/scans/showScansModal.tsx, src/views/scans/viewScansList.tsx, src/views/credentials/viewCredentialsList.tsx, src/views/notFound/notFound.tsx, src/components/errorMessage/errorMessage.tsx, src/vendor/react-table-batteries/tackle2-ui-legacy/components/TableControls/NoDataEmptyState.tsx, StateError.tsx. PF6 pattern: <EmptyState titleText=\"Title\" headingLevel=\"h4\" icon={CubesIcon}>."
     },
     {
@@ -74,7 +74,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Files: src/components/aboutModal/aboutModal.tsx + any other files using Text/TextContent. Search entire src/ for these imports."
     },
     {
@@ -95,7 +95,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "10 source files: src/components/aboutModal/aboutModal.tsx, src/components/viewLayout/viewLayoutToolbar.tsx, src/views/sources/addSourceModal.tsx, addSourcesScanModal.tsx, showSourceConnectionsModal.tsx, src/views/scans/showScansModal.tsx, showAggregateReportModal.tsx, src/views/credentials/addCredentialModal.tsx, viewCredentialsList.tsx, src/views/scans/viewScansList.tsx."
     },
     {
@@ -116,7 +116,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Search all files for <Button usage and verify icon placement. PF6 pattern: <Button variant='plain' icon={<TimesIcon />} /> instead of <Button variant='plain'><TimesIcon /></Button>."
     },
     {
@@ -137,7 +137,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Files: src/vendor/react-table-batteries/tackle2-ui-legacy/components/FilterToolbar/MultiselectFilterControl.tsx, SelectFilterControl.tsx, FilterToolbar.tsx, select-overrides.css, and TableControls/NoDataEmptyState.tsx, StateError.tsx. Single-select uses MenuToggle+SelectList. Multi-select uses hasCheckbox+isSelected on SelectOption."
     },
     {
@@ -155,7 +155,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "Files: src/components/simpleDropdown/simpleDropdown.tsx, src/components/typeAheadCheckboxes/typeaheadCheckboxes.tsx, src/components/actionMenu/actionMenu.tsx + related tests."
     },
     {
@@ -174,7 +174,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": "For each --pf-t--temp--dev--tbd placeholder: read the comment noting the original PF5 token, find closest PF6 semantic token from https://www.patternfly.org/tokens/all-patternfly-tokens, replace the placeholder. Files: src/app.css, src/components/viewLayout/viewLayoutToolbar.css, src/views/sources/showSourceConnectionsModal.css, src/vendor/.../select-overrides.css."
     },
     {
@@ -192,7 +192,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": "Common fixes: snapshot failures (delete and regenerate with npx jest -u), query failures from changed DOM structure/class names, portal rendering (use { hidden: true } or screen.getByRole for Select/Dropdown/Modal content), import failures from removed components, @types mismatches."
     }
   ]
