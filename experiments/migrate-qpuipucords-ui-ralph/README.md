@@ -10,6 +10,10 @@ We are choosing this as a sample since we have a PR identified that shows the re
     * Looking at changes to package.json we can see that commit `6a8b6a7e9b65cf5aeeda4e12789737dd4ae0e706` is on PF 5
     * Tag 2.1.0 is last release on PF 5
   * We are using ```./checkout_source.sh``` to clone the repo and checkout the tag
+    * git remote add upstream https://github.com/quipucords/quipucords-ui.git
+    * git fetch upstream --tags
+    * git checkout -b pf6_ralph_migration tags/2.1.0
+
 
 ## How was this experiment setup:
 * Using claude code with Opus 4.6 (1M)
@@ -102,5 +106,11 @@ We are choosing this as a sample since we have a PR identified that shows the re
       - Acceptance criteria are concrete and checkable — no vague "works correctly" statements
 
       Story dependency chain: strictly sequential (1→2→3→...→10). US-001 must run first (codemods), US-010 is final verification. Each story builds on the previous.
+
   ⎿  ```
       * Results in [prd.json](./prd.json)
+
+## Results of the migration
+* Console output can be seen at: https://gist.github.com/jwmatthews/71c6c99fb4a975531e90a589050c62b3
+* Branch with the code changes is at: https://github.com/jwmatthews/quipucords-ui/tree/ralph/pf6-migration-quipucords-ui
+  * A draft PR was pushed to https://github.com/jwmatthews/quipucords-ui/pull/1/changes
