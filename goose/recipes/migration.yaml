@@ -2,6 +2,13 @@ version: "1.0.0"
 title: "Code Migration"
 description: "Migrate applications between technology stacks using kantra static analysis and automated fixes."
 
+# This is what runs when you start the recipe in headless mode
+prompt: |
+  Migrate the application from {{source_tech}} to {{target_tech}}
+  located at {{input_path}}
+  using the rules in {{rules}}
+  and workspace directory {{workspace_dir}}
+
 parameters:
   - key: source_tech
     input_type: string
