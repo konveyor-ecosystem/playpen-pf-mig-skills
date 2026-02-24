@@ -1,0 +1,191 @@
+## Codebase Patterns
+- PatternFly packages are in dependencies (not devDependencies): @patternfly/patternfly, @patternfly/react-core, @patternfly/react-icons, @patternfly/react-styles, @patternfly/react-table
+- The quipucords-ui directory is a separate git repo (cloned from github.com/quipucords/quipucords-ui, based on tag 2.1.0)
+- TypeScript checking: `npm run test:types` (runs `tsc --noEmit`)
+- Test suite: `npm run test:ci-coverage` (runs jest with coverage)
+- Vendor code in src/vendor/react-table-batteries/ contains legacy tackle2-ui components that need manual migration (Select)
+- PF6 EmptyState: use `titleText` as a string (not wrapping in `<Title>` component) and `headingLevel` as a direct prop on EmptyState
+- PF6 Modal uses composable API: `<Modal>` + `<ModalHeader title="...">` + `<ModalBody>` + `<ModalFooter>` — no `title` or `actions` props on Modal itself
+- When a component accepts an `actions` array (e.g. ShowScansModal), render them inside `<ModalFooter>{actions}</ModalFooter>` conditionally
+- `OptionPropsWithKey` type in vendor code is now a standalone interface `{ key: string; value: string; label?: string }` — no longer extends deprecated `SelectOptionProps`
+- PF6 composable Select: single-select uses `Select` + `SelectList` + `SelectOption` + `MenuToggle` (toggle render prop). Multi-select adds `hasCheckbox` and `isSelected` on `SelectOption`
+- PF6 composable Select inline filter: use `MenuSearch` > `MenuSearchInput` > `SearchInput` inside `Select`, with a `Divider` before `SelectList`
+- PF6 Pagination alignment: `alignRight` is now `alignEnd` in ToolbarItemProps `align` prop
+- No `@patternfly/react-core/deprecated` imports remain anywhere in the codebase after US-007
+- PF6 MenuToggle auto-generates OUIA IDs that override custom `data-ouia-component-id` attributes — use `ouiaId` prop instead
+- PF6 composable Dropdown requires `DropdownList` wrapper around `DropdownItem` children (otherwise menu content won't render)
+- Dark theme class changed from `pf-v5-theme-dark` to `pf-v6-theme-dark`
+- Codemod leaves `data-codemods` attributes on components — these must be manually removed after migration
+- PF6 Button: icons must use `icon` prop, not children — `<Button icon={<MyIcon />} />` not `<Button><MyIcon /></Button>`
+- PF6 MenuToggle: icons must use `icon` prop — `<MenuToggle icon={<EllipsisVIcon />} />` not `<MenuToggle><EllipsisVIcon /></MenuToggle>`
+- PF6 react-tokens use `t_` prefix naming (e.g. `t_global_icon_color_100`, `t_global_icon_color_status_danger_default`). For icon colors, use `t_global_icon_color_*` tokens, not general `t_global_color_status_*` tokens.
+- Prettier config is in `.eslintrc.js` (no `.prettierrc`): `singleQuote: true, trailingComma: 'none', printWidth: 120, arrowParens: 'avoid'` — always run prettier after codemods or manual edits
+
+# Ralph Progress Log
+Started: Mon Feb 23 03:29:59 PM EST 2026
+---
+
+## 2026-02-23 - US-005
+- Migrated all Modal components from deprecated `@patternfly/react-core/deprecated` to PF6 composable Modal API
+- Replaced deprecated `title` prop with `<ModalHeader title="..." />` child component
+- Replaced deprecated `actions` prop with `<ModalFooter>` child component containing action buttons
+- Wrapped modal content in `<ModalBody>` component
+- Migrated 9 source files: addSourceModal.tsx, addSourcesScanModal.tsx, showSourceConnectionsModal.tsx, showScansModal.tsx, showAggregateReportModal.tsx, addCredentialModal.tsx, viewCredentialsList.tsx, viewScansList.tsx, viewSourcesList.tsx
+- Also discovered and migrated viewSourcesList.tsx (not listed in PRD notes but also used deprecated Modal)
+- aboutModal.tsx was already using non-deprecated AboutModal from @patternfly/react-core — no changes needed
+- Merged duplicate `@patternfly/react-core` import blocks in all files
+- Regenerated 21 snapshots across 6 test suites
+- Files changed: 9 source files, 6 snapshot files
+- **Learnings for future iterations:**
+  - The PF6 Modal public API exports only 4 components: `Modal`, `ModalHeader`, `ModalBody`, `ModalFooter`. Internal components like `ModalBoxHeader`, `ModalBoxTitle`, `ModalBoxCloseButton`, `ModalContent` exist but are NOT exported from the index.
+  - `ModalHeader` accepts `title`, `description`, `labelId`, `titleIconVariant` — it handles the close button internally (rendered by Modal when `onClose` is provided).
+  - For components that receive an `actions` array prop (ShowScansModal, ShowAggregateReportModal), the pattern is: `{actions && <ModalFooter>{actions}</ModalFooter>}` — conditionally render footer only when actions are provided.
+  - The PRD listed 10 files but missed viewSourcesList.tsx which also had 2 deprecated Modal instances. Always search the full codebase for deprecated patterns.
+  - No browser testing tools available — manual verification needed.
+---
+
+## 2026-02-23 - US-004
+- Migrated Text/TextContent to Content component — source code was already correctly migrated by codemods
+- Regenerated 3 aboutModal snapshots: TextContent→Content, TextList→Content component="dl", TextListItem→Content component="dt"/"dd"
+- Verified no imports of Text, TextContent, TextList, TextListItem, TextVariants, TextListVariants, or TextListItemVariants remain in any source file
+- Files changed: aboutModal.test.tsx.snap
+- **Learnings for future iterations:**
+  - The pf-codemods fully handled Text/TextContent→Content migration in source files. Only stale snapshots needed regeneration.
+  - The aboutModal uses Content with component="dl"/"dt"/"dd" (definition list pattern) rather than "ul"/"li" — the PF6 Content component supports all HTML semantic elements via the component prop.
+  - No browser testing tools available — manual verification needed.
+---
+
+## 2026-02-23 - US-003
+- Migrated EmptyState components to PF6 API across 3 files that still used `<Title>` wrapper inside `titleText`
+- Removed `Title` import from errorMessage.tsx, NoDataEmptyState.tsx, StateError.tsx
+- Changed `titleText={<Title headingLevel="h2" size="lg">...</Title>}` to `titleText="..." headingLevel="h2"` (PF6 pattern)
+- Regenerated 5 snapshots across 3 test suites (errorMessage, notFound, showScansModal)
+- Files changed: errorMessage.tsx, NoDataEmptyState.tsx, StateError.tsx, 3 snapshot files
+- **Learnings for future iterations:**
+  - The pf-codemods partially migrated EmptyState — they added `titleText` and `icon` props but left the `<Title>` component wrapping inside `titleText` in some files. Manual cleanup was needed to unwrap `<Title>` and move `headingLevel` to the EmptyState prop.
+  - Files that already had string `titleText` and `headingLevel` as direct props (notFound.tsx, viewSourcesList.tsx, viewScansList.tsx, viewCredentialsList.tsx, showScansModal.tsx) were correctly handled by codemods and needed no changes.
+  - No browser testing tools available — manual verification needed.
+---
+
+## 2026-02-23 - US-002
+- Fixed core layout components for PF6 compatibility
+- Removed `data-codemods` attributes from MastheadBrand and MastheadLogo in viewLayout.tsx
+- Updated dark theme class from `pf-v5-theme-dark` to `pf-v6-theme-dark` in viewLayoutToolbar.tsx
+- Changed `data-ouia-component-id` to `ouiaId` prop on all MenuToggle components (PF6 OUIA ID override issue)
+- Added `DropdownList` wrapper around `DropdownItem` children in all 3 Dropdown instances (PF6 composable API requirement)
+- Removed `isPlain` prop from kebab Dropdown (redundant with `variant="plain"` on MenuToggle)
+- Regenerated all viewLayout snapshots — no pf-v5 references remain
+- Files changed: viewLayout.tsx, viewLayoutToolbar.tsx, 3 snapshot files
+- **Learnings for future iterations:**
+  - PF6 MenuToggle has a class component internally that auto-generates `data-ouia-component-id` via `getOUIAProps` — this is merged LAST in Object.assign and overrides any custom `data-ouia-component-id` data attribute. Always use the `ouiaId` React prop instead.
+  - PF6 composable Dropdown renders menu content via a Popper portal to `document.body` — items only render when `isOpen=true` AND `DropdownList` wraps the items. Without `DropdownList`, menu content silently fails to render.
+  - Test querySelector for `data-ouia-component-id` will silently return null if OUIA IDs are auto-generated (the attribute value changes). This causes tests to fail at a later assertion, not at the querySelector line.
+  - The Masthead structure (MastheadMain > MastheadToggle + MastheadBrand > MastheadLogo) and Page `masthead` prop were already correct after codemods.
+  - No browser testing tools available — manual verification needed.
+---
+
+## 2026-02-23 - US-001
+- Updated all @patternfly/* packages from v5 (5.3.x) to v6 (6.4.x)
+- Ran three codemods: pf-codemods --v6 --fix, class-name-updater --v6 --fix, css-vars-updater --fix
+- 75 automated fixes applied by pf-codemods (down from 125 issues to 42 remaining)
+- Class names updated from pf-v5 to pf-v6 in CSS files and test files
+- CSS variables updated (e.g., --pf-v5-global--spacer--sm -> --pf-t--global--spacer--sm)
+- Files changed: package.json, package-lock.json, 28 source files in src/
+- **Learnings for future iterations:**
+  - pf-codemods auto-fixes Modal imports to @patternfly/react-core/deprecated path — this is a stepping stone, not the final PF6 Modal API
+  - EmptyStateHeader and EmptyStateIcon removal requires manual migration — codemods flag them but won't auto-fix
+  - Select/SelectOption from deprecated path are fully removed in PF6 — need complete rewrite to composable Select
+  - The `alignRight` value for Pagination is now `alignEnd` in PF6
+  - CSS var updater handles --pf-v5- to --pf-t-- or --pf-v6- prefix changes
+  - 29 TypeScript errors remain, categorized as: deprecated Select imports (vendor code), EmptyState non-exported components (multiple views), OptionPropsWithKey missing `value` and `label` properties, Pagination alignRight -> alignEnd
+---
+
+## 2026-02-23 - US-006
+- Migrated Button and MenuToggle components to use PF6 `icon` prop instead of icon children
+- Moved EllipsisVIcon, QuestionCircleIcon from MenuToggle children to `icon` prop in viewLayoutToolbar.tsx (2 instances)
+- Moved EllipsisVIcon from MenuToggle children to `icon` prop in actionMenu.tsx
+- Changed `data-ouia-component-id` to `ouiaId` prop on actionMenu MenuToggle
+- Moved FilterIcon from MenuToggle children to `icon` prop in FilterToolbar.tsx
+- Moved AngleDownIcon/AngleRightIcon from Button children to `icon` prop in ToolbarBulkSelector.tsx
+- Regenerated 3 snapshots (actionMenu: 2, ExtendedButton: 1 stale)
+- No FormGroup `labelIcon`, HelperTextItem `hasIcon`/`isDynamic`, Checkbox `isLabelBeforeButton`, NavItem `hasNavLinkWrapper`, `data-codemods`, or `<Title>` usage found — these were either not used or already fixed by codemods
+- Files changed: actionMenu.tsx, viewLayoutToolbar.tsx, FilterToolbar.tsx, ToolbarBulkSelector.tsx, 2 snapshot files
+- **Learnings for future iterations:**
+  - PF6 wraps icon prop content in `<span class="pf-v6-c-menu-toggle__icon">` — snapshot diffs will show this wrapper element appearing
+  - Most Button components were already correctly using the `icon` prop after codemods ran — only ToolbarBulkSelector had icon children that codemods missed (likely because it used a ternary expression)
+  - MenuToggle icon-as-children pattern was NOT caught by codemods — all instances needed manual migration
+  - Pre-existing type errors (29) from US-007 scope (deprecated Select, OptionPropsWithKey, alignRight) remain unchanged
+  - No browser testing tools available — manual verification needed.
+---
+
+## 2026-02-23 - US-007
+- Rewrote SelectFilterControl.tsx from deprecated Select to PF6 composable Select (Select + SelectList + SelectOption + MenuToggle)
+- Rewrote MultiselectFilterControl.tsx from deprecated Select with SelectVariant.checkbox to PF6 composable Select with hasCheckbox, isSelected, and inline filter (MenuSearch + SearchInput)
+- Replaced OptionPropsWithKey type: was `extends SelectOptionProps` (deprecated), now standalone `{ key: string; value: string; label?: string }`
+- Removed `SelectOptionProps` import from `@patternfly/react-core/deprecated` in FilterToolbar.tsx
+- Added `DropdownList` wrapper for non-grouped dropdown items in FilterToolbar.tsx (PF6 requirement)
+- Updated select-overrides.css: changed `pf-v6-c-select` (old Select class) to `pf-v6-c-menu__content` (composable Select uses Menu internally)
+- Fixed `alignRight` to `alignEnd` in usePaginationPropHelpers.ts (PF6 Pagination API change)
+- Zero `@patternfly/react-core/deprecated` imports remain in entire codebase
+- npm run test:types passes with zero errors (down from 29 errors)
+- Files changed: SelectFilterControl.tsx, MultiselectFilterControl.tsx, FilterToolbar.tsx, select-overrides.css, usePaginationPropHelpers.ts
+- **Learnings for future iterations:**
+  - PF6 composable Select uses a render-prop toggle: `toggle={(toggleRef) => <MenuToggle ref={toggleRef} ...>}` — the toggleRef must be passed to MenuToggle's `ref` prop
+  - PF6 Select `onSelect` signature is `(event, value) => void` where value is `string | number | undefined` — no more `SelectOptionObject`
+  - For multiselect with inline filter, use `MenuSearch` > `MenuSearchInput` > `SearchInput` inside the Select, with `Divider` separator before `SelectList` — this replaces the old `hasInlineFilter` + `onFilter` props
+  - The `isSelected` prop on `SelectOption` controls checkbox state in multi-select — it does NOT use the `selected` prop on `Select` for checkbox mode
+  - Pre-existing test failures (9 tests in simpleDropdown and contextIcon) are from US-008 and US-009 scope respectively — not affected by vendor code changes
+  - No browser testing tools available — manual verification needed.
+---
+
+## 2026-02-23 - US-008
+- All three target components (simpleDropdown, typeaheadCheckboxes, actionMenu) were already using PF6 composable APIs — no deprecated imports remained
+- Changed `data-ouia-component-id` to `ouiaId` prop on MenuToggle in simpleDropdown.tsx and typeaheadCheckboxes.tsx (PF6 OUIA ID override fix)
+- Regenerated 4 stale snapshots in simpleDropdown (PF5→PF6 class name updates)
+- Regenerated 3 stale snapshots in addCredentialModal (cascading from SimpleDropdown ouiaId fix — OUIA-Generated-MenuToggle-default-N replaced with proper auth_type/become_method values)
+- actionMenu.tsx was already fully migrated (ouiaId prop, icon prop on MenuToggle, DropdownList wrapper) — no changes needed
+- typeaheadCheckboxes.tsx was already using composable Select with TextInputGroup toggle — only ouiaId fix needed
+- npm run test:types passes; 32/33 test suites pass (contextIcon failure is pre-existing US-009 scope)
+- Files changed: simpleDropdown.tsx, typeaheadCheckboxes.tsx, 2 snapshot files
+- **Learnings for future iterations:**
+  - The `data-ouia-component-id` → `ouiaId` fix on SimpleDropdown cascades to all consumers — addCredentialModal snapshots needed regeneration because it renders SimpleDropdown with `menuToggleOuiaId` props
+  - All three components were already on PF6 composable APIs from prior codemods/manual migration — US-008 was mostly snapshot cleanup
+  - The pre-existing contextIcon test failure (5 tests, color token values like #c9190b→#BC11E0) is from CSS design token changes in PF6 — belongs to US-009 scope
+  - No browser testing tools available — manual verification needed.
+---
+
+## 2026-02-23 - US-009
+- Replaced all `t_temp_dev_tbd` placeholder token imports in contextIcon.tsx with proper PF6 semantic icon color tokens
+- Token mapping: `global_Color_dark_100` → `t_global_icon_color_100`, `global_success_color_100` → `t_global_icon_color_status_success_default`, `global_warning_color_100` → `t_global_icon_color_status_warning_default`, `global_danger_color_100` → `t_global_icon_color_status_danger_default`
+- Regenerated 5 contextIcon snapshots with new PF6 color values (#1f1f1f, #3d7019, #73480b, #b1380b)
+- Verified zero `--pf-t--temp--dev--tbd`, `pf-v5-`, `--pf-v5-`, or `data-codemods` references remain in any source file
+- CSS files (app.css, viewLayoutToolbar.css, showSourceConnectionsModal.css, select-overrides.css) already clean — no changes needed
+- PatternFly CSS import path in app.tsx already correct: `@patternfly/react-core/dist/styles/base.css`
+- No hardcoded pixel breakpoint values found in JS/TS files
+- npm run test:types passes with zero errors
+- Files changed: contextIcon.tsx, contextIcon.test.tsx.snap
+- **Learnings for future iterations:**
+  - PF6 has separate icon-specific color tokens (`t_global_icon_color_*`) that should be used for icon colors, rather than the general status color tokens (`t_global_color_status_*`). The icon tokens have higher contrast values appropriate for small visual elements.
+  - The `t_temp_dev_tbd` placeholder token resolves to `#BC11E0` (purple) — this makes it visually obvious in the UI which tokens still need replacement.
+  - contextIcon.tsx was the ONLY file in the codebase still importing `t_temp_dev_tbd` — all CSS files and other source files were already clean from prior stories.
+  - No browser testing tools available — manual verification needed.
+---
+
+## 2026-02-23 - US-010
+- Fixed all prettier/formatting errors across 45 source files (single quotes, trailing commas, indentation, line wrapping to match project config: singleQuote: true, trailingComma: none, printWidth: 120)
+- Consolidated duplicate `@patternfly/react-tokens` imports in contextIcon.tsx (4 separate import lines → 1 merged import)
+- All quality checks pass:
+  - `npm run test:types`: zero errors
+  - `npm run test:lint`: zero errors (6 pre-existing warnings only — react-hooks/exhaustive-deps, @typescript-eslint/no-explicit-any)
+  - `npm run test:ci-coverage`: 33/33 test suites, 262/262 tests, 247/247 snapshots
+  - Coverage: statements 87.47%, branches 76.79%, functions 83.15%, lines 88.1% (all above thresholds)
+  - `npm run build`: completes successfully
+- Zero stale PF5 references in snapshot files (no `pf-v5` or `--pf-v5` matches)
+- Files changed: 45 source files (formatting fixes), contextIcon.tsx (import consolidation)
+- **Learnings for future iterations:**
+  - The project's prettier config is embedded in `.eslintrc.js` under `prettier/prettier` rule — there is no standalone `.prettierrc`. Run prettier with `--single-quote --trailing-comma none --print-width 120 --arrow-parens avoid` to match.
+  - Prior stories left formatting inconsistencies (double quotes, wrong indentation, trailing commas) because codemods and manual edits didn't respect the project's prettier config. Always run prettier after making changes.
+  - The `import/no-duplicates` warning occurs when multiple imports from the same package are on separate lines — consolidate them into a single import block.
+  - Pre-existing warnings (react-hooks/exhaustive-deps in login.tsx, @typescript-eslint/no-explicit-any in addSourceModal.tsx and addCredentialModal.tsx) are outside migration scope — they existed before PF5→PF6 migration.
+  - No browser testing tools available — manual verification needed.
+---
