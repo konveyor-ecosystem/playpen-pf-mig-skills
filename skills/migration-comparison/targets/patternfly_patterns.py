@@ -638,20 +638,30 @@ def detect_button_icon_prop(
     ref_content: str | None, cand_content: str | None,
     ref_tree: Any, cand_tree: Any, **kwargs: Any,
 ) -> dict[str, Any]:
-    """Detect Button icon prop migration (icon as child → icon prop)."""
+    """Detect Button icon prop migration (icon as child → icon prop).
+
+    Applicability: the golden truth (ref) must use the ``icon=`` prop on
+    Button.  We check the golden content directly rather than relying
+    solely on the diff, since diff-based checks can false-trigger when
+    the candidate uses the pattern but the golden truth does not.
+    """
     pid = "button-icon-prop"
     if not ref_diff:
         return _not_applicable(pid)
 
-    ref_has_button = _diff_has_pattern(ref_diff, r"\bButton\b") or _diff_removes_pattern(ref_diff, r"\bButton\b")
-    ref_icon_change = _diff_has_pattern(ref_diff, r"\bicon=") or _diff_removes_pattern(ref_diff, r"\bicon=")
+    # Check golden truth content for the icon= prop pattern
+    ref_uses_icon_prop = ref_content is not None and bool(re.search(r"\bicon\s*=", ref_content))
+    # Also accept diff-based detection: golden truth adds icon= (+ lines in ref_diff)
+    ref_adds_icon = _diff_has_pattern(ref_diff, r"\bicon=")
 
-    if not (ref_has_button and ref_icon_change):
+    if not (ref_uses_icon_prop or ref_adds_icon):
         return _not_applicable(pid)
 
-    cand_icon_change = _diff_has_pattern(cand_diff, r"\bicon=") or _diff_removes_pattern(cand_diff, r"\bicon=")
+    # Check if candidate also has the icon= prop
+    cand_has_icon = cand_content is not None and bool(re.search(r"\bicon\s*=", cand_content))
+    cand_icon_in_diff = _diff_has_pattern(cand_diff, r"\bicon=")
 
-    if cand_icon_change:
+    if cand_has_icon or cand_icon_in_diff:
         return _result(pid, "correct", "Button icon prop migrated")
     return _result(pid, "missing", "Button icon prop migration not applied")
 

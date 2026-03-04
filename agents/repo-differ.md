@@ -17,6 +17,8 @@ description: Run the diff pipeline on two directory trees. Enumerates files, exe
 
 Run the full diff pipeline on two directory trees and produce `comparison-data.json`.
 
+**Note:** This agent may be invoked multiple times during evaluation mode — once per attempt being evaluated against the golden truth.
+
 ## Inputs
 
 - **Workspace directory**: path where output files are written

@@ -790,6 +790,7 @@ def build_scoring_results(
     comparison_data: dict[str, Any],
     dir_a: str = "",
     dir_b: str = "",
+    label: str | None = None,
 ) -> dict[str, Any]:
     """Build the final scoring-results.json structure."""
     fc_score = file_coverage_data["score"]
@@ -845,6 +846,7 @@ def build_scoring_results(
             "scoring_version": "1.0",
             "dir_a": str(Path(dir_a).resolve()) if dir_a else "",
             "dir_b": str(Path(dir_b).resolve()) if dir_b else "",
+            "label": label,
         },
         "score": final,
         "pattern_results": pattern_results,
@@ -879,6 +881,11 @@ def main() -> None:
         "--targets-dir",
         default=None,
         help="Directory containing target pattern files (default: ../targets relative to this script)",
+    )
+    parser.add_argument(
+        "--label",
+        default=None,
+        help="Semantic label for this scoring run (e.g., 'golden-vs-ai-agent')",
     )
 
     args = parser.parse_args()
@@ -953,6 +960,7 @@ def main() -> None:
         comparison_data=comparison_data,
         dir_a=args.dir_a,
         dir_b=args.dir_b,
+        label=args.label,
     )
 
     # Compute and display final score
