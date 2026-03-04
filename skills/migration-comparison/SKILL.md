@@ -17,6 +17,7 @@ Ask the user for:
 - **Reference A**: git URL with branch (e.g., `https://github.com/org/repo@branch`) or a local directory path. Ask for a label (e.g., "Ground Truth", "Agent A").
 - **Reference B**: same format. Ask for a label.
 - **File filters** (optional): glob patterns to restrict which files are compared (e.g., `*.tsx`, `src/**/*.ts`).
+- **Migration target** (optional): identifier for target-specific pattern scoring (e.g., `patternfly`). When specified, the scoring step uses target-specific pattern detectors for more precise quality scoring.
 
 ### 2. Create Workspace
 
@@ -83,8 +84,9 @@ Delegate to `repo-differ` subagent with:
 - The labels for each reference
 - Whether GumTree is available (and the method: native or docker)
 - File filter globs (if provided)
+- The migration target (if provided, e.g., `patternfly`)
 
-The subagent runs the full pipeline: `enumerate_files.py` → `run_diffs.py` → `categorize_changes.py` and produces `comparison-data.json`.
+The subagent runs the full pipeline: `enumerate_files.py` → `run_diffs.py` → `categorize_changes.py` → `score_migration.py` and produces `comparison-data.json` and `scoring-results.json`.
 
 **If the subagent reports errors** (e.g., too many diff failures, systemic GumTree issues), surface them to the user and ask whether to continue to report generation or investigate.
 
@@ -102,11 +104,14 @@ The subagent reads `comparison-data.json`, annotates the most significant change
 
 ## Phase 4: Output
 
-Tell the user the path to the generated report:
+Tell the user the path to the generated report and the quality score:
 
 ```
 Comparison report: $WORK_DIR/comparison-report.html
+Quality grade: <grade> (<percent>%)
 ```
+
+Include the overall quality grade and percentage if scoring was performed.
 
 ---
 

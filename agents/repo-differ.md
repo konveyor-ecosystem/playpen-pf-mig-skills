@@ -26,6 +26,7 @@ Run the full diff pipeline on two directory trees and produce `comparison-data.j
 - **Label B**: human-readable label for directory B
 - **GumTree available**: whether GumTree AST diffing is available (and method: native or docker)
 - **File filter globs** (optional): glob patterns to restrict which files are compared
+- **Migration target** (optional): target identifier for target-specific pattern scoring (e.g., `patternfly`)
 
 ## Process
 
@@ -78,7 +79,30 @@ python3 scripts/categorize_changes.py \
 
 This produces `<workspace>/comparison-data.json` with changes assigned to categories: structural, semantic, api_changes, cosmetic, additive, subtractive.
 
-### 4. Report Errors
+### 4. Score Migration Quality
+
+If a migration target was specified, run:
+```bash
+python3 scripts/score_migration.py \
+  --comparison-data <workspace>/comparison-data.json \
+  --dir-a <dir_a> --dir-b <dir_b> \
+  --output-dir <workspace> \
+  --target <target> --targets-dir scripts/../targets
+```
+
+Without a target, run for generic scoring only:
+```bash
+python3 scripts/score_migration.py \
+  --comparison-data <workspace>/comparison-data.json \
+  --dir-a <dir_a> --dir-b <dir_b> \
+  --output-dir <workspace>
+```
+
+This produces `<workspace>/scoring-results.json` with quality scores, pattern results, noise analysis, and recommendations.
+
+**If the script fails**, report the error back to the calling skill.
+
+### 5. Report Errors
 
 After the pipeline completes, check `comparison-data.json` for:
 - The `errors` array — files where diffing failed
@@ -96,3 +120,4 @@ Return the path to `comparison-data.json` and a summary of the pipeline run:
 - Files modified / added / removed / identical
 - AST diffs performed vs text diffs performed
 - Number of errors (if any)
+- Quality grade and overall score (if scoring was performed)

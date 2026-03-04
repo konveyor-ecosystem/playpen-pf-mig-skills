@@ -169,9 +169,9 @@ def run_text_diff(file_a: str | Path, file_b: str | Path) -> dict[str, Any]:
     """Run a text-based unified diff using difflib."""
     try:
         with open(file_a, "r", encoding="utf-8", errors="replace") as f:
-            lines_a = f.readlines()
+            lines_a = [line.rstrip("\n") for line in f.readlines()]
         with open(file_b, "r", encoding="utf-8", errors="replace") as f:
-            lines_b = f.readlines()
+            lines_b = [line.rstrip("\n") for line in f.readlines()]
     except (OSError, IOError) as e:
         raise RuntimeError(f"Cannot read files: {e}")
 

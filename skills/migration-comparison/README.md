@@ -14,7 +14,7 @@ A [Claude Code skill](https://code.claude.com/docs/en/skills) (also compatible w
 
 ### Claude Code
 
-1. Copy `skills/migration-comparison/` to `.claude/skills/migration-comparison/` in your project (or `~/.claude/skills/migration-comparison/` for global availability).
+1. Copy `skills/migration-comparison/` (including `scripts/` and `targets/`) to `.claude/skills/migration-comparison/` in your project (or `~/.claude/skills/migration-comparison/` for global availability).
 2. Copy the required agents to `.claude/agents/` in your project (or `~/.claude/agents/`):
    - `agents/repo-differ.md`
    - `agents/comparison-report-generator.md`
@@ -84,7 +84,14 @@ python3 scripts/categorize_changes.py \
   --label-a "Ground Truth" --label-b "Agent A" \
   --output-dir /tmp/workspace
 
-# 4. Generate HTML report
+# 4. Score migration quality (optional: add --target patternfly for PF-specific patterns)
+python3 scripts/score_migration.py \
+  --comparison-data /tmp/workspace/comparison-data.json \
+  --dir-a /path/to/dir_a --dir-b /path/to/dir_b \
+  --output-dir /tmp/workspace \
+  --target patternfly
+
+# 5. Generate HTML report (automatically includes scoring if scoring-results.json exists)
 python3 scripts/generate_comparison_report.py /tmp/workspace
 ```
 
@@ -102,6 +109,7 @@ python3 scripts/generate_comparison_report.py /tmp/workspace
 | `scripts/enumerate_files.py` | Walks two directory trees, computes SHA-256 hashes, classifies files as added/removed/modified/identical |
 | `scripts/run_diffs.py` | Executes GumTree AST diffs (native/podman/docker) with text diff fallback, parallel execution |
 | `scripts/categorize_changes.py` | Assigns change categories: structural, semantic, API changes, cosmetic, additive, subtractive |
+| `scripts/score_migration.py` | Scores migration quality: file coverage, pattern detection, noise analysis |
 | `scripts/generate_comparison_report.py` | Generates a self-contained HTML report from `comparison-data.json` |
 
 ## GumTree Support
@@ -113,6 +121,34 @@ GumTree provides AST-level diffing for richer change categorization. The skill p
 `.ts`, `.js`, `.py`, `.java`, `.css`, `.go`, `.rs`, `.rb`, `.c`, `.cpp`, `.h`, `.hpp`, `.kt`, `.swift`, `.php`, `.ml`, `.yaml`, `.yml`, `.xml`
 
 **Not supported**: `.tsx`, `.jsx` — these fall back to text diffing automatically.
+
+## Migration Quality Scoring
+
+The pipeline includes a quality scoring step that evaluates migration candidates against a reference. The score is computed from three weighted components:
+
+- **File Coverage (20%)**: proportion of reference files present in the candidate
+- **Pattern Score (65%)**: weighted accuracy of migration pattern application (target-specific when `--target` is used, heuristic-based otherwise)
+- **Noise Penalty (15%)**: deductions for debug artifacts, placeholder tokens, formatting-only changes, and unnecessary modifications
+
+Grade scale: A ≥ 90, B ≥ 80, C ≥ 70, D ≥ 60, F < 60.
+
+When a `--target` is specified, the scorer loads pattern detectors from `targets/<target>_patterns.py`. These detectors use tree-sitter AST analysis (for TSX/TS files) and regex on diff text to check whether specific migration patterns were correctly applied.
+
+### Available Targets
+
+| Target | Description | Patterns |
+|--------|-------------|----------|
+| `patternfly` | PatternFly 5 → 6 migration | 24 patterns (12 trivial, 9 moderate, 3 complex) |
+
+### Tree-sitter Dependencies
+
+The scoring step requires `tree-sitter` and `tree-sitter-typescript` for AST analysis. Install them via:
+
+```bash
+pip install tree-sitter>=0.23 tree-sitter-typescript>=0.23
+```
+
+Or use the provided wrapper script (`scripts/run_pipeline.sh`) which automatically sets up a virtual environment with the required dependencies.
 
 ## Known Limitations
 
