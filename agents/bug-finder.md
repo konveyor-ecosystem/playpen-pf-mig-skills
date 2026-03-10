@@ -57,7 +57,7 @@ You receive:
 
 ## Output
 
-Write a JSON file to the workspace path provided by the orchestrator. The JSON must follow this structure:
+Return your results as a JSON block in your response. If a workspace path is provided by the orchestrator and you have write access, also write the JSON there — but **always include the full JSON in your response text** so the orchestrator can extract it. The JSON must follow this structure:
 
 ```json
 {

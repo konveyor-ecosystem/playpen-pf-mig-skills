@@ -84,13 +84,26 @@ def load_comparison_data(output_dir: Path, attempt_name: str) -> dict[str, Any] 
 
 
 def load_llm_assessment(output_dir: Path) -> LLMAssessment | None:
-    """Load llm-assessment.json if present."""
+    """Load llm-assessment.json if present.
+
+    Filters out not_real issues (they have null severity and shouldn't
+    contribute to scoring or problem areas).
+    """
     path = output_dir / "llm-assessment.json"
     if not path.exists():
         return None
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
-        return LLMAssessment.model_validate(data)
+
+    # Filter out not_real issues before validation — referees set severity
+    # to null for disproved issues, which fails Severity enum validation.
+    for fa in data.get("file_assessments", []):
+        fa["issues"] = [
+            issue for issue in fa.get("issues", [])
+            if issue.get("referee_verdict") != "not_real"
+        ]
+
+    return LLMAssessment.model_validate(data)
 
 
 def compute_attempt_score(

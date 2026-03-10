@@ -161,7 +161,7 @@ class ScoringResults(BaseModel):
 class AdversarialIssue(BaseModel):
     id: str
     description: str
-    severity: Severity = Severity.medium
+    severity: Severity | None = Severity.medium
     impact_score: int = 5
     bug_finder_argument: str = ""
     adversary_argument: str = ""

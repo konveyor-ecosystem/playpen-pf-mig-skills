@@ -24,7 +24,7 @@ Ask the user for:
 Create a temporary workspace directory outside either project:
 
 ```bash
-WORK_DIR=$(mktemp -d -t migration-comparison-$(date +%m_%d_%y_%H))
+WORK_DIR=$(mktemp -d -t migration-comparison-XXXXXXXX)
 ```
 
 All artifacts go inside `$WORK_DIR`.
@@ -172,35 +172,69 @@ The subagent validates the golden truth first (baseline), then each attempt, cap
 
 ### E4. Adversarial Review
 
-Select files for adversarial review: **all files with meaningful diffs** between golden truth and each attempt. Skip identical files and trivial whitespace-only changes.
+#### Selecting files
+
+Select files for adversarial review from the pairwise `comparison-data.json` files. The structure is:
+
+```json
+{
+  "files": {
+    "added": [{"path": "...", ...}],
+    "removed": [{"path": "...", ...}],
+    "modified": [{"path": "...", "categories": [...], "text_diff": "...", ...}]
+  }
+}
+```
+
+Review **all files in `files.modified`** that have meaningful diffs. Also review files in `files.added` (present in attempt but not golden — may indicate unnecessary additions). Skip `files.removed` (present in golden but not attempt — already penalized by deterministic scoring). Skip files where `categories` is only `["cosmetic"]`. Skip lock files, snapshots, and other generated artifacts (e.g., `package-lock.json`, `*.snap`).
+
+#### Preparing diffs
+
+For each selected file, generate a unified diff:
+```bash
+diff -u <golden_file> <attempt_file> > $WORK_DIR/adversarial/<attempt>/<filename>/diff.txt
+```
+
+Create the output directory structure: `$WORK_DIR/adversarial/<attempt>/<filename>/` for each file.
+
+#### Loading runtime evidence
 
 Load runtime evidence from `$WORK_DIR/runtime-validation.json` if it exists. For each file being reviewed, extract relevant runtime evidence:
 - Test failures that reference the file
 - Screenshots showing pages that include the file's components
 - Build errors mentioning the file
 
-For each attempt, for each selected file, run the three-agent adversarial pipeline in sequence:
+#### Running the three-agent pipeline
+
+For each attempt, process files in parallel batches. For each file, run the three agents **sequentially** (each depends on the previous):
 
 1. **Delegate to `bug-finder` subagent** with:
-   - The golden truth file content
-   - The attempt's file content
+   - The golden truth file content (include inline — **do not rely on the subagent reading files from disk**)
+   - The attempt's file content (include inline)
    - The unified diff between them
-   - The deterministic pattern results for this file
-   - Runtime evidence for this file and attempt (test failures, screenshots, errors — if available from runtime validation)
-   - Output path: `$WORK_DIR/adversarial/<attempt>/<filename>/bug-finder.json`
+   - The deterministic pattern results for this file (from `scoring-results.json`)
+   - Runtime evidence for this file and attempt (if available)
+   - Instruction to return JSON in the format specified by the bug-finder agent
 
 2. **Delegate to `adversary` subagent** with:
-   - The golden truth file content
-   - The attempt's file content
-   - The bug-finder's issue list (from step 1)
-   - Output path: `$WORK_DIR/adversarial/<attempt>/<filename>/adversary.json`
+   - The golden truth file content (include inline)
+   - The attempt's file content (include inline)
+   - The bug-finder's issue list (from step 1 — paste the JSON directly)
+   - Instruction to return JSON in the format specified by the adversary agent
 
 3. **Delegate to `referee` subagent** with:
-   - The golden truth file content (presented as "ground truth")
-   - The attempt's file content
-   - Each issue with both bug-finder and adversary arguments
+   - The golden truth file content (include inline, presented as "ground truth")
+   - The attempt's file content (include inline)
+   - Each issue with both bug-finder and adversary arguments (paste inline)
    - Runtime evidence for this file and attempt (if available)
-   - Output path: `$WORK_DIR/adversarial/<attempt>/<filename>/referee.json`
+   - Instruction to return JSON in the format specified by the referee agent
+
+**Important: Subagents may not have write permissions.** After each agent completes, **you (the orchestrator) must extract the JSON from the agent's response** and write it to the expected output path yourself:
+- `$WORK_DIR/adversarial/<attempt>/<filename>/bug-finder.json`
+- `$WORK_DIR/adversarial/<attempt>/<filename>/adversary.json`
+- `$WORK_DIR/adversarial/<attempt>/<filename>/referee.json`
+
+#### Consolidating results
 
 After all files are processed, consolidate per-file referee results into `$WORK_DIR/llm-assessment.json` with the structure:
 
