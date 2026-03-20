@@ -117,10 +117,14 @@ def compute_attempt_score(
 
     det_percent = score_data.get("overall_percent", 0)
     det_grade = score_data.get("grade", "F")
+    det_points = score_data.get("points", 0.0)
+    det_positive = score_data.get("positive_points", 0.0)
+    det_negative = score_data.get("negative_points", 0.0)
 
     # Extract component scores
     fc_score = components.get("file_coverage", {}).get("score", 0.0)
     ps_score = components.get("pattern_score", {}).get("score", 0.0)
+    ps_points = components.get("pattern_score", {}).get("points", 0.0)
     np_penalty = components.get("noise_penalty", {}).get("raw_penalty", 0.0)
     np_capped = min(np_penalty, 1.0)
 
@@ -134,7 +138,7 @@ def compute_attempt_score(
         if attempt_assessments:
             llm_score = sum(fa.summary_score for fa in attempt_assessments) / len(attempt_assessments)
 
-    # Composite score
+    # Composite score (percentage-based, for backwards compat)
     if llm_score is not None:
         composite = (
             WEIGHT_FILE_COVERAGE * fc_score
@@ -143,7 +147,6 @@ def compute_attempt_score(
             + WEIGHT_LLM * llm_score
         )
     else:
-        # Without LLM, redistribute weight to deterministic
         adjusted_det_weight = WEIGHT_DETERMINISTIC + WEIGHT_LLM
         composite = (
             WEIGHT_FILE_COVERAGE * fc_score
@@ -154,16 +157,38 @@ def compute_attempt_score(
     composite_percent = int(round(composite * 100))
     composite_grade = grade_from_percent(composite_percent)
 
+    # Composite points: pattern points + LLM bonus/penalty
+    composite_points = det_points
+    if llm_score is not None:
+        # LLM issues confirmed as "real" count as deductions
+        attempt_issues = [
+            issue
+            for fa in (llm_assessment.file_assessments if llm_assessment else [])
+            if fa.attempt == attempt_name
+            for issue in fa.issues
+            if issue.referee_verdict == "real"
+        ]
+        llm_deductions = sum(
+            2.0 if issue.severity == "high" else 1.0
+            for issue in attempt_issues
+        )
+        composite_points -= llm_deductions
+
     return AttemptScore(
         overall_percent=det_percent,
         grade=det_grade,
+        points=det_points,
+        positive_points=det_positive,
+        negative_points=det_negative,
         deterministic_percent=det_percent,
         llm_score=llm_score,
         composite_percent=composite_percent,
         composite_grade=composite_grade,
+        composite_points=round(composite_points, 2),
         components={
             "file_coverage": fc_score,
             "pattern_score": ps_score,
+            "pattern_points": ps_points,
             "noise_penalty": np_capped,
             "llm_score": llm_score,
         },
@@ -381,6 +406,9 @@ def build_scorecard(
         attempts_scorecard[name] = {
             "overall_grade": score.composite_grade or score.grade if score else "?",
             "overall_percent": score.composite_percent or score.overall_percent if score else 0,
+            "points": score.composite_points if score and score.composite_points is not None else (score.points if score else 0),
+            "positive_points": score.positive_points if score else 0,
+            "negative_points": score.negative_points if score else 0,
             "deterministic_findings": deterministic_findings,
             "llm_themes": attempt_themes,
         }
@@ -604,9 +632,14 @@ def main() -> None:
     print("  Composite Evaluation Summary")
     print(f"{'='*60}")
     for name, score in attempt_scores.items():
-        composite_str = f" → Composite: {score.composite_grade} ({score.composite_percent}%)" if score.composite_percent is not None else ""
+        pts_str = f" | Points: {score.points:+.1f}"
+        composite_str = ""
+        if score.composite_percent is not None:
+            composite_str = f" → Composite: {score.composite_grade} ({score.composite_percent}%)"
+            if score.composite_points is not None:
+                composite_str += f" [{score.composite_points:+.1f} pts]"
         llm_str = f", LLM: {score.llm_score:.0%}" if score.llm_score is not None else ""
-        print(f"  {name}: Det: {score.grade} ({score.overall_percent}%){llm_str}{composite_str}")
+        print(f"  {name}: Det: {score.grade} ({score.overall_percent}%){pts_str}{llm_str}{composite_str}")
 
     if problem_areas:
         print(f"\n  Problem areas identified: {len(problem_areas)}")

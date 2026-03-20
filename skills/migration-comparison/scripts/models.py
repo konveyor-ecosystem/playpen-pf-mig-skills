@@ -106,6 +106,9 @@ class ScoreBreakdown(BaseModel):
     overall_score: float
     overall_percent: int
     grade: str
+    points: float = 0.0
+    positive_points: float = 0.0
+    negative_points: float = 0.0
     components: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -229,10 +232,14 @@ class ProblemArea(BaseModel):
 class AttemptScore(BaseModel):
     overall_percent: int
     grade: str
+    points: float = 0.0
+    positive_points: float = 0.0
+    negative_points: float = 0.0
     deterministic_percent: int = 0
     llm_score: float | None = None
     composite_percent: int | None = None
     composite_grade: str | None = None
+    composite_points: float | None = None
     components: dict[str, Any] = Field(default_factory=dict)
 
 

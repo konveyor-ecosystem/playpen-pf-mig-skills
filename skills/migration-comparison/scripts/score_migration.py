@@ -622,21 +622,32 @@ def _summarize_pattern(
 
 
 def compute_pattern_score(results: list[dict[str, Any]]) -> dict[str, Any]:
-    """Compute weighted pattern score from pattern results.
+    """Compute uncapped additive pattern score from pattern results.
 
-    CORRECT=1.0, INCORRECT=0, MISSING=0, NOT_APPLICABLE=excluded.
+    Points system (per file instance, scaled by pattern weight):
+      correct:      +weight   (you did the right thing)
+      incorrect:    -weight   (you broke something)
+      missing:       0        (didn't attempt — neutral)
+      not_migrated:  0        (didn't touch — neutral)
+      file_missing:  0        (file not present — neutral)
+
+    The score is uncapped: positive points for correct work, negative for
+    broken work, zero for untouched. This lets us compare attempts by raw
+    value delivered rather than penalizing for not touching everything.
     """
-    credit_map: dict[str, float] = {
+    points_map: dict[str, float] = {
         "correct": 1.0,
-        "incorrect": 0.0,
+        "incorrect": -1.0,
         "missing": 0.0,
         "file_missing": 0.0,
         "not_migrated": 0.0,
     }
 
-    total_weighted = 0.0
-    earned_weighted = 0.0
+    total_points = 0.0
+    positive_points = 0.0
+    negative_points = 0.0
     by_complexity: dict[str, dict[str, Any]] = {}
+    by_status: dict[str, int] = {}
 
     for result in results:
         status = result.get("status", "not_applicable")
@@ -644,9 +655,14 @@ def compute_pattern_score(results: list[dict[str, Any]]) -> dict[str, Any]:
             continue
 
         weight = result.get("weight", 2)
-        credit = credit_map.get(status, 0.0)
-        total_weighted += weight
-        earned_weighted += weight * credit
+        points = points_map.get(status, 0.0) * weight
+        total_points += points
+        if points > 0:
+            positive_points += points
+        elif points < 0:
+            negative_points += points
+
+        by_status[status] = by_status.get(status, 0) + 1
 
         complexity = result.get("complexity", "moderate")
         if complexity not in by_complexity:
@@ -654,12 +670,17 @@ def compute_pattern_score(results: list[dict[str, Any]]) -> dict[str, Any]:
         by_complexity[complexity]["total"] += 1
         by_complexity[complexity][status] = by_complexity[complexity].get(status, 0) + 1
 
-    score = earned_weighted / total_weighted if total_weighted > 0 else 0.0
+    # Also compute a 0-1 ratio for backwards compat (correct / applicable)
+    applicable = sum(1 for r in results if r.get("status", "not_applicable") != "not_applicable")
+    correct_count = by_status.get("correct", 0)
+    score_ratio = correct_count / applicable if applicable > 0 else 0.0
 
     return {
-        "score": round(score, 4),
-        "total_weighted": round(total_weighted, 2),
-        "earned_weighted": round(earned_weighted, 2),
+        "score": round(score_ratio, 4),
+        "points": round(total_points, 2),
+        "positive_points": round(positive_points, 2),
+        "negative_points": round(negative_points, 2),
+        "by_status": by_status,
         "by_complexity": by_complexity,
     }
 
@@ -711,10 +732,15 @@ def compute_final_score(
     file_coverage: float,
     pattern_score: float,
     noise_penalty: float,
+    pattern_points: float = 0.0,
+    positive_points: float = 0.0,
+    negative_points: float = 0.0,
+    noise_count: int = 0,
 ) -> dict[str, Any]:
-    """Compute final composite score.
+    """Compute final composite score using both points and percentage.
 
-    Formula: (0.20 * FC) + (0.65 * PS) + (0.15 * (1 - NP))
+    Points = pattern_points - noise deductions
+    Percentage is kept for backwards compat / grading.
     """
     weighted_fc = WEIGHT_FILE_COVERAGE * file_coverage
     weighted_ps = WEIGHT_PATTERN_SCORE * pattern_score
@@ -722,6 +748,9 @@ def compute_final_score(
 
     overall = weighted_fc + weighted_ps + weighted_noise
     percent = int(round(overall * 100))
+
+    # Points-based: net pattern points minus noise instances
+    net_points = pattern_points - (noise_count * 0.5)
 
     grade = "F"
     for threshold, letter in GRADE_THRESHOLDS:
@@ -733,6 +762,9 @@ def compute_final_score(
         "overall_score": round(overall, 4),
         "overall_percent": percent,
         "grade": grade,
+        "points": round(net_points, 2),
+        "positive_points": round(positive_points, 2),
+        "negative_points": round(negative_points, 2),
         "components": {
             "file_coverage": {
                 "score": round(file_coverage, 4),
@@ -743,6 +775,7 @@ def compute_final_score(
                 "score": round(pattern_score, 4),
                 "weight": WEIGHT_PATTERN_SCORE,
                 "weighted": round(weighted_ps, 4),
+                "points": round(pattern_points, 2),
             },
             "noise_penalty": {
                 "raw_penalty": round(noise_penalty, 4),
@@ -835,7 +868,13 @@ def build_scoring_results(
     ps_score = pattern_score_data["score"]
     np_penalty = noise_penalty_data["capped_penalty"]
 
-    final = compute_final_score(fc_score, ps_score, np_penalty)
+    final = compute_final_score(
+        fc_score, ps_score, np_penalty,
+        pattern_points=pattern_score_data.get("points", 0.0),
+        positive_points=pattern_score_data.get("positive_points", 0.0),
+        negative_points=pattern_score_data.get("negative_points", 0.0),
+        noise_count=noise_penalty_data.get("instance_count", 0),
+    )
 
     # Augment components with extra details
     final["components"]["file_coverage"]["matched"] = file_coverage_data["matched"]
@@ -976,7 +1015,10 @@ def main() -> None:
         print("No target specified, using generic pattern scoring")
         pattern_score_data = compute_generic_pattern_score(comparison_data)
 
-    print(f"Pattern score: {pattern_score_data['score']:.1%}")
+    pts = pattern_score_data.get("points", 0)
+    pos = pattern_score_data.get("positive_points", 0)
+    neg = pattern_score_data.get("negative_points", 0)
+    print(f"Pattern score: {pattern_score_data['score']:.1%} | Points: {pts:+.1f} (+{pos:.1f} / {neg:.1f})")
 
     # Step 3: Noise detection
     noise_instances = detect_noise(
@@ -1010,7 +1052,8 @@ def main() -> None:
     # Compute and display final score
     score = results["score"]
     print(
-        f"\nOverall: {score['overall_percent']}% (Grade {score['grade']})"
+        f"\nOverall: {score['overall_percent']}% (Grade {score['grade']}) | "
+        f"Points: {score['points']:+.1f} (+{score['positive_points']:.1f} / {score['negative_points']:.1f})"
     )
 
     # Write output

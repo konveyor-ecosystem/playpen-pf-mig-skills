@@ -286,37 +286,47 @@ def render_value_story(
 
     ai_percent = ai_score.get("composite_percent", ai_score.get("overall_percent", 0))
     ai_grade = ai_score.get("composite_grade", ai_score.get("grade", "?"))
+    ai_points = ai_score.get("composite_points", ai_score.get("points", 0))
+    ai_pos = ai_score.get("positive_points", 0)
+    ai_neg = ai_score.get("negative_points", 0)
     codemods_percent = codemods_score.get("composite_percent", codemods_score.get("overall_percent", 0))
     codemods_grade = codemods_score.get("composite_grade", codemods_score.get("grade", "?"))
+    codemods_points = codemods_score.get("composite_points", codemods_score.get("points", 0))
+    codemods_pos = codemods_score.get("positive_points", 0)
+    codemods_neg = codemods_score.get("negative_points", 0)
 
-    delta = ai_percent - codemods_percent
+    points_delta = ai_points - codemods_points
 
-    # Hero banner
-    delta_color = "#16a34a" if delta > 0 else ("#dc2626" if delta < 0 else "#6b7280")
-    delta_sign = "+" if delta > 0 else ""
-    delta_word = "improvement" if delta > 0 else ("deficit" if delta < 0 else "tie")
+    # Hero banner — use points for the main comparison
+    delta_color = "#16a34a" if points_delta > 0 else ("#dc2626" if points_delta < 0 else "#6b7280")
+    delta_sign = "+" if points_delta > 0 else ""
+    delta_word = "ahead" if points_delta > 0 else ("behind" if points_delta < 0 else "tied")
 
     if ai_name and codemods_name:
         parts.append(f'''<div class="hero-banner">
-            <div class="hero-delta" style="color:{delta_color}">{delta_sign}{delta} points</div>
-            <div class="hero-subtitle">AI agent ({escape(ai_name)}) provides a
-                <strong style="color:{delta_color}">{abs(delta)}-point {delta_word}</strong>
-                over codemods ({escape(codemods_name)})</div>
+            <div class="hero-delta" style="color:{delta_color}">{delta_sign}{points_delta:.1f} pts</div>
+            <div class="hero-subtitle">AI agent ({escape(ai_name)}) is
+                <strong style="color:{delta_color}">{abs(points_delta):.1f} points {delta_word}</strong>
+                vs codemods ({escape(codemods_name)})</div>
         </div>''')
 
-    # Side-by-side grade cards
+    # Side-by-side grade cards with points
     parts.append('<div class="grade-comparison">')
     if ai_name:
         parts.append(f'''<div class="grade-card">
             <div class="grade-card-label">AI Agent</div>
             <div class="grade-card-name">{escape(ai_name)}</div>
-            {grade_badge(ai_grade, ai_percent)}
+            <div class="points-display"><span class="points-value">{ai_points:+.1f}</span> <span class="points-label">pts</span></div>
+            <div class="points-breakdown">+{ai_pos:.1f} earned / {ai_neg:.1f} deducted</div>
+            {grade_badge(ai_grade, ai_percent, "small")}
         </div>''')
     if codemods_name:
         parts.append(f'''<div class="grade-card">
             <div class="grade-card-label">Codemods</div>
             <div class="grade-card-name">{escape(codemods_name)}</div>
-            {grade_badge(codemods_grade, codemods_percent)}
+            <div class="points-display"><span class="points-value">{codemods_points:+.1f}</span> <span class="points-label">pts</span></div>
+            <div class="points-breakdown">+{codemods_pos:.1f} earned / {codemods_neg:.1f} deducted</div>
+            {grade_badge(codemods_grade, codemods_percent, "small")}
         </div>''')
     parts.append('</div>')
 
@@ -1092,6 +1102,12 @@ def generate_html(
   .grade-card {{ background: white; border-radius: 12px; padding: 28px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }}
   .grade-card-label {{ font-size: 13px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }}
   .grade-card-name {{ font-size: 15px; color: #475569; margin-bottom: 12px; }}
+
+  /* Points display */
+  .points-display {{ margin: 8px 0; }}
+  .points-value {{ font-size: 36px; font-weight: 800; letter-spacing: -1px; }}
+  .points-label {{ font-size: 18px; color: #64748b; font-weight: 600; }}
+  .points-breakdown {{ font-size: 12px; color: #94a3b8; margin-bottom: 12px; }}
 
   /* Value sections */
   .value-section {{ background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }}

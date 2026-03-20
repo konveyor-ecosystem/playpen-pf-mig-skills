@@ -267,7 +267,10 @@ def main() -> None:
         score = scoring.get("score", {})
         grade = score.get("grade", "?")
         percent = score.get("overall_percent", 0)
-        print(f"  {name}: {grade} ({percent}%)")
+        points = score.get("points", 0)
+        pos = score.get("positive_points", 0)
+        neg = score.get("negative_points", 0)
+        print(f"  {name}: {grade} ({percent}%) | {points:+.1f} pts (+{pos:.1f} / {neg:.1f})")
 
     print(f"\nArtifacts written to: {output_dir}")
     print(str(output_dir))
