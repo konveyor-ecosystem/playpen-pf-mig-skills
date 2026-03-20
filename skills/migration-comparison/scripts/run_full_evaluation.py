@@ -189,16 +189,24 @@ def main() -> None:
     ]
     run_script(report_cmd, "Step 4: Generate HTML Report")
 
+    # Step 5: Generate Markdown report
+    md_report_cmd = [
+        sys.executable, str(scripts_dir / "generate_markdown_report.py"),
+        str(output_dir),
+    ]
+    run_script(md_report_cmd, "Step 5: Generate Markdown Report")
+
     # Summary
     print(f"\n{'='*60}")
     print(f"  Evaluation Complete")
     print(f"{'='*60}")
     print(f"\n  Artifacts:")
-    print(f"    Report:     {output_dir / 'evaluation-report.html'}")
-    print(f"    Results:    {output_dir / 'evaluation-results.json'}")
-    print(f"    Scorecard:  {output_dir / 'scorecard.json'}")
+    print(f"    HTML Report: {output_dir / 'evaluation-report.html'}")
+    print(f"    MD Report:   {output_dir / 'evaluation-report.md'}")
+    print(f"    Results:     {output_dir / 'evaluation-results.json'}")
+    print(f"    Scorecard:   {output_dir / 'scorecard.json'}")
     if args.llm_review:
-        print(f"    LLM Review: {output_dir / 'llm-assessment.json'}")
+        print(f"    LLM Review:  {output_dir / 'llm-assessment.json'}")
     print(f"\n  Open the report: xdg-open {output_dir / 'evaluation-report.html'}")
     print(str(output_dir))
 
