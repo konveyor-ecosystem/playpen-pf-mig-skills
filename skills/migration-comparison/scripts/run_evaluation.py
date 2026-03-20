@@ -90,6 +90,7 @@ def run_pipeline_for_attempt(
     output_dir: Path,
     target: str | None,
     gumtree_info: dict[str, Any],
+    before_migration_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Run the full deterministic pipeline for one attempt vs golden."""
     label = f"golden-vs-{attempt_name}"
@@ -151,6 +152,8 @@ def run_pipeline_for_attempt(
     ]
     if target:
         score_cmd.extend(["--target", target, "--targets-dir", str(targets_dir)])
+    if before_migration_dir:
+        score_cmd.extend(["--before-migration", str(before_migration_dir)])
     run_script(score_cmd, "Score migration")
 
     # Load and return scoring results
@@ -189,6 +192,11 @@ def main() -> None:
         help="Migration target for pattern scoring (e.g., 'patternfly')",
     )
     parser.add_argument(
+        "--before-migration",
+        default=None,
+        help="Path to the source codebase before any migration was applied",
+    )
+    parser.add_argument(
         "--no-gumtree",
         action="store_true",
         help="Skip GumTree AST diffing",
@@ -200,6 +208,9 @@ def main() -> None:
     scripts_dir = Path(__file__).parent.resolve()
     targets_dir = scripts_dir.parent / "targets"
     golden_dir = validate_directory(args.golden, "Golden truth")
+    before_migration_dir: Path | None = None
+    if args.before_migration:
+        before_migration_dir = validate_directory(args.before_migration, "Before-migration")
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -226,6 +237,8 @@ def main() -> None:
             print("GumTree: not available (text diff only)")
 
     print(f"\nGolden truth: {golden_dir}")
+    if before_migration_dir:
+        print(f"Before migration: {before_migration_dir}")
     print(f"Attempts: {', '.join(name for name, _ in attempts)}")
     if args.target:
         print(f"Target: {args.target}")
@@ -242,6 +255,7 @@ def main() -> None:
             output_dir=output_dir,
             target=args.target,
             gumtree_info=gumtree_info,
+            before_migration_dir=before_migration_dir,
         )
         all_results[name] = scoring
 

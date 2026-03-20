@@ -32,7 +32,7 @@ except ImportError:
     def jsx_find_components(tree: Any, source: str) -> list[dict[str, Any]]:  # type: ignore[misc]
         return []
 
-    def jsx_jsx_find_prop_on_component(tree: Any, source: str, comp: str, prop: str) -> bool:  # type: ignore[misc]
+    def jsx_find_prop_on_component(tree: Any, source: str, comp: str, prop: str) -> bool:  # type: ignore[misc]
         return False
 
     def jsx_get_children(tree: Any, source: str, comp: str) -> list[str]:  # type: ignore[misc]

@@ -302,6 +302,143 @@ def _recommendation_for_pattern(pr: dict[str, Any]) -> str:
     return ""
 
 
+PATTERN_DESCRIPTIONS: dict[str, str] = {
+    "css-class-prefix": "PF6 renamed CSS class prefixes from pf-v5- to pf-v6-. All CSS selectors and class references must be updated.",
+    "utility-class-rename": "PF6 renamed utility classes from pf-u-* to pf-v6-u-*.",
+    "css-logical-properties": "PF6 adopted CSS logical properties (e.g., paddingInlineStart instead of paddingLeft) for better RTL support.",
+    "theme-dark-removal": "PF6 removed the dark theme variant. Components using ThemeVariant.dark or pf-theme-dark must be updated.",
+    "inner-ref-to-ref": "PF6 renamed the innerRef prop to ref on components.",
+    "align-right-to-end": "PF6 renamed alignment props from right/left to end/start for internationalization.",
+    "is-action-cell": "PF6 removed isActionCell prop in favor of hasAction.",
+    "space-items-removal": "PF6 removed the spaceItems prop from components.",
+    "ouia-component-id": "PF6 standardized OUIA component IDs.",
+    "chips-to-labels": "PF6 removed Chip/ChipGroup components. Replace with Label/LabelGroup.",
+    "split-button-items": "PF6 renamed splitButtonOptions to splitButtonItems.",
+    "modal-import-path": "PF6 moved Modal to react-core/next or deprecated paths.",
+    "text-content-consolidation": "PF6 consolidated TextContent, TextList, Text into a single Content component.",
+    "empty-state-restructure": "PF6 restructured EmptyState — EmptyStateHeader/EmptyStateIcon replaced with titleText prop.",
+    "toolbar-variant": "PF6 renamed toolbar variant values (chip-group → label-group, etc.).",
+    "toolbar-gap": "PF6 replaced toolbar spacer props with CSS gap/columnGap/rowGap.",
+    "button-icon-prop": "PF6 changed Button icon API to use an icon prop.",
+    "page-section-variant": "PF6 removed PageSection variant='light'/'dark'/'darker' and PageSectionVariants enum.",
+    "page-masthead": "PF6 replaced PageHeader with Masthead component.",
+    "react-tokens-icon-status": "PF6 renamed react-tokens imports from global_* to t_* format.",
+    "avatar-props": "PF6 updated Avatar component props.",
+    "select-rewrite": "PF6 replaced the Select component with a new MenuToggle+SelectList pattern. Requires restructuring component composition.",
+    "masthead-reorganization": "PF6 reorganized Masthead — MastheadToggle removed, MastheadLogo added.",
+    "test-selector-rewrite": "PF6 changed test selectors from pf-v5- to pf-v6- CSS class prefixes.",
+}
+
+
+def build_scorecard(
+    scoring_data: dict[str, dict[str, Any]],
+    attempt_scores: dict[str, "AttemptScore"],
+    comparisons: dict[str, "AttemptComparison"],
+    llm_themes: list[dict[str, Any]],
+    target: str | None,
+    golden_dir: str,
+) -> dict[str, Any]:
+    """Build scorecard.json — flat, diffable, per-pattern pass/fail per attempt."""
+    from datetime import datetime, timezone
+
+    run_id = datetime.now(timezone.utc).strftime("%Y-%m-%d") + ("-" + target if target else "")
+    attempt_names = sorted(scoring_data.keys())
+
+    # Build per-attempt scorecard entries
+    attempts_scorecard: dict[str, Any] = {}
+    for name in attempt_names:
+        scoring = scoring_data[name]
+        score = attempt_scores.get(name)
+
+        deterministic_findings: list[dict[str, Any]] = []
+        for pr in scoring.get("pattern_results", []):
+            if pr.get("status") == "not_applicable":
+                continue
+            description = PATTERN_DESCRIPTIONS.get(pr["pattern_id"], "")
+            finding: dict[str, Any] = {
+                "id": pr["pattern_id"],
+                "name": pr.get("name", pr["pattern_id"]),
+                "description": description,
+                "complexity": pr.get("complexity", "moderate"),
+                "status": pr.get("status", "unknown"),
+                "detail": pr.get("message", ""),
+                "files": pr.get("files", []),
+            }
+            deterministic_findings.append(finding)
+
+        # LLM themes for this attempt
+        attempt_themes: list[dict[str, Any]] = []
+        for theme in llm_themes:
+            if theme.get("attempt") == name:
+                attempt_themes.append({
+                    "severity": theme.get("severity", "medium"),
+                    "theme": theme.get("theme", ""),
+                    "description": theme.get("description", ""),
+                    "affected_files": theme.get("affected_files", []),
+                    "confidence": theme.get("confidence", 0.5),
+                })
+
+        attempts_scorecard[name] = {
+            "overall_grade": score.composite_grade or score.grade if score else "?",
+            "overall_percent": score.composite_percent or score.overall_percent if score else 0,
+            "deterministic_findings": deterministic_findings,
+            "llm_themes": attempt_themes,
+        }
+
+    # Build comparison section
+    comparison_section: dict[str, list[dict[str, str]]] = {
+        "ai_leads_on": [],
+        "codemods_leads_on": [],
+        "both_correct": [],
+        "both_wrong": [],
+    }
+
+    # Use first comparison if available
+    if comparisons:
+        first_key = next(iter(comparisons))
+        comp = comparisons[first_key]
+        names = first_key.split("_vs_")
+        name_a = names[0] if len(names) >= 2 else attempt_names[0] if attempt_names else ""
+        name_b = names[1] if len(names) >= 2 else (attempt_names[1] if len(attempt_names) > 1 else "")
+
+        # Map pattern IDs to names
+        all_patterns: dict[str, str] = {}
+        for scoring in scoring_data.values():
+            for pr in scoring.get("pattern_results", []):
+                all_patterns[pr["pattern_id"]] = pr.get("name", pr["pattern_id"])
+
+        for adv in comp.a_advantages:
+            comparison_section["ai_leads_on"].append({
+                "name": adv.name or all_patterns.get(adv.pattern_id, adv.pattern_id),
+                "id": adv.pattern_id,
+            })
+        for adv in comp.b_advantages:
+            comparison_section["codemods_leads_on"].append({
+                "name": adv.name or all_patterns.get(adv.pattern_id, adv.pattern_id),
+                "id": adv.pattern_id,
+            })
+        for pid in comp.ties:
+            comparison_section["both_correct"].append({
+                "name": all_patterns.get(pid, pid),
+                "id": pid,
+            })
+        for pid in comp.neither:
+            comparison_section["both_wrong"].append({
+                "name": all_patterns.get(pid, pid),
+                "id": pid,
+            })
+
+    scorecard: dict[str, Any] = {
+        "run_id": run_id,
+        "target": target,
+        "golden_dir": golden_dir,
+        "attempts": attempts_scorecard,
+        "comparison": comparison_section,
+    }
+
+    return scorecard
+
+
 def compute_llm_summary(llm_assessment: LLMAssessment) -> LLMSummary:
     """Compute summary statistics from LLM assessment."""
     total_issues = sum(len(fa.issues) for fa in llm_assessment.file_assessments)
@@ -342,6 +479,11 @@ def main() -> None:
         required=True,
         dest="attempts",
         help="Named attempt in 'name=/path' format",
+    )
+    parser.add_argument(
+        "--before-migration",
+        default=None,
+        help="Path to the source codebase before any migration (for metadata)",
     )
     parser.add_argument(
         "--target",
@@ -411,12 +553,15 @@ def main() -> None:
         pairwise_data[name] = scoring_data[name]
 
     # Compose results
+    meta_kwargs: dict[str, Any] = {
+        "golden_dir": str(Path(args.golden).resolve()),
+        "attempts": attempt_map,
+        "target": args.target,
+    }
+    if args.before_migration:
+        meta_kwargs["before_migration_dir"] = str(Path(args.before_migration).resolve())
     results = EvaluationResults(
-        metadata=EvaluationMetadata(
-            golden_dir=str(Path(args.golden).resolve()),
-            attempts=attempt_map,
-            target=args.target,
-        ),
+        metadata=EvaluationMetadata(**meta_kwargs),
         attempt_scores={name: score for name, score in attempt_scores.items()},
         comparisons={key: comp for key, comp in comparisons.items()},
         problem_areas=problem_areas,
@@ -424,12 +569,35 @@ def main() -> None:
         pairwise_data=pairwise_data,
     )
 
-    # Write output
+    # Write evaluation results
     output_path = output_dir / "evaluation-results.json"
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(results.model_dump_json(indent=2))
 
     print(f"Evaluation results written to: {output_path}")
+
+    # Load raw LLM themes (not in the pydantic model)
+    llm_themes_raw: list[dict[str, Any]] = []
+    llm_raw_path = output_dir / "llm-assessment.json"
+    if llm_raw_path.exists():
+        with open(llm_raw_path, "r", encoding="utf-8") as f:
+            llm_raw = json.load(f)
+        llm_themes_raw = llm_raw.get("themes", [])
+
+    # Build and write scorecard
+    scorecard = build_scorecard(
+        scoring_data=scoring_data,
+        attempt_scores=attempt_scores,
+        comparisons=comparisons,
+        llm_themes=llm_themes_raw,
+        target=args.target,
+        golden_dir=str(Path(args.golden).resolve()),
+    )
+    scorecard_path = output_dir / "scorecard.json"
+    with open(scorecard_path, "w", encoding="utf-8") as f:
+        json.dump(scorecard, f, indent=2)
+
+    print(f"Scorecard written to: {scorecard_path}")
 
     # Print summary
     print(f"\n{'='*60}")

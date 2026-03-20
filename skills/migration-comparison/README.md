@@ -1,159 +1,215 @@
-# Skill: Migration Comparison
+# Migration Evaluation Tool
 
-A [Claude Code skill](https://code.claude.com/docs/en/skills) (also compatible with [Gemini CLI skills](https://geminicli.com/docs/cli/skills/)) that compares two migration attempts of the same codebase using AST diffing ([GumTree](https://github.com/GumTreeDiff/gumtree)) with text diff fallback. Produces a self-contained HTML comparison report with categorized changes, semantic analysis, and side-by-side diffs. This skill delegates specialized tasks to [subagents](https://code.claude.com/docs/en/sub-agents).
+Answers one question: **"Is our AI migration agent providing value over just running pf-codemods?"**
+
+Two layers:
+- **Deterministic** (Python scripts): Diffs, 24 PF-specific pattern detectors, file coverage, noise analysis. Fast, reproducible, cheap.
+- **LLM semantic review**: Adversarial debate loop (Critic/Challenger/Judge) using `claude -p`. Identifies high-level conceptual issues that detectors can't catch.
+
+## Quick Start
+
+```bash
+python3 scripts/run_full_evaluation.py \
+  --golden /path/to/golden-truth \
+  --before-migration /path/to/pre-migration-source \
+  --attempt ai-agent=/path/to/ai-output \
+  --attempt codemods=/path/to/codemods-output \
+  --output-dir /tmp/eval-run-001 \
+  --target patternfly \
+  --no-gumtree \
+  --llm-review
+```
+
+Produces:
+- `evaluation-report.html` -- 4-tab HTML report (Value Story, Problem Areas, Scorecard, Evidence)
+- `evaluation-results.json` -- machine-readable composite results
+- `scorecard.json` -- per-pattern pass/fail, designed for diffing across runs
+- `llm-assessment.json` -- LLM review themes and per-file issue verdicts
+
+## Setting Up the Quipucords Test Data
+
+The quipucords-ui PF5-to-PF6 migration is the reference test case.
+
+### 1. Clone the pre-migration source (before any migration)
+
+```bash
+EVAL_DIR=/tmp/qpc-eval
+mkdir -p $EVAL_DIR
+
+git clone https://github.com/quipucords/quipucords-ui.git $EVAL_DIR/base --branch main
+cd $EVAL_DIR/base
+git fetch origin 3b3ce52c2af3e83f16fff324c77c3b7022f8d9e3
+git checkout 3b3ce52c2af3e83f16fff324c77c3b7022f8d9e3
+```
+
+This is the v2.1.0 release, the last commit before the PF6 migration PR.
+
+### 2. Clone the golden truth (expert human migration)
+
+```bash
+cp -a $EVAL_DIR/base $EVAL_DIR/golden
+cd $EVAL_DIR/golden
+git fetch origin 4908c3be3cd41effbdaa508e20e50ec041f5ef4a
+git checkout 4908c3be3cd41effbdaa508e20e50ec041f5ef4a
+```
+
+This is the merge commit of [PR #664](https://github.com/quipucords/quipucords-ui/pull/664) (`feat(pf6): upgrade UI to PatternFly 6`).
+
+### 3. Clone the AI migration attempt
+
+```bash
+git clone --depth 1 https://github.com/pranavgaikwad/quipucords-ui.git $EVAL_DIR/ai-agent --branch pf5
+```
+
+This is [PR #1](https://github.com/pranavgaikwad/quipucords-ui/pull/1) (`migrate with goose + claude sonnet 4.5 + recipe`).
+
+### 4. Generate the codemods baseline
+
+```bash
+cp -a $EVAL_DIR/base $EVAL_DIR/codemods
+cd $EVAL_DIR/codemods
+npm install
+npx --yes @patternfly/pf-codemods --v6 --fix src/
+```
+
+This runs the official PatternFly codemods (automated transforms only, no manual fixes).
+
+### 5. Run the full evaluation
+
+```bash
+cd /path/to/playpen-pf-mig-skills/skills/migration-comparison
+
+python3 scripts/run_full_evaluation.py \
+  --golden $EVAL_DIR/golden \
+  --before-migration $EVAL_DIR/base \
+  --attempt ai-agent=$EVAL_DIR/ai-agent \
+  --attempt codemods=$EVAL_DIR/codemods \
+  --output-dir $EVAL_DIR/results \
+  --target patternfly \
+  --no-gumtree \
+  --llm-review
+```
+
+Open the report: `xdg-open $EVAL_DIR/results/evaluation-report.html`
+
+## How It Works
+
+### Architecture
+
+```
+run_full_evaluation.py (orchestrator)
+  |-- run_evaluation.py (deterministic pipeline, per attempt)
+  |     |-- enumerate_files.py    -> file-manifest.json
+  |     |-- run_diffs.py          -> diff-results.json
+  |     |-- categorize_changes.py -> comparison-data.json
+  |     |-- score_migration.py    -> scoring-results.json
+  |-- run_llm_review.py (adversarial LLM loop, per attempt)
+  |     |-- Round N: Critic -> Challenger -> Judge (each `claude -p`)
+  |     |-- Convergence check, loop until stable or max rounds
+  |     |-- Consolidator: cross-file themes -> llm-assessment.json
+  |-- compose_evaluation.py -> evaluation-results.json + scorecard.json
+  |-- generate_evaluation_report.py -> evaluation-report.html
+```
+
+### Pattern Statuses
+
+When `--before-migration` is provided, the scoring distinguishes:
+
+| Status | Meaning |
+|---|---|
+| `correct` | Pattern migrated correctly (matches golden truth approach) |
+| `incorrect` | Pattern migration attempted but wrong |
+| `missing` | Pattern expected but not found in the attempt |
+| `not_migrated` | File is identical to before-migration source -- attempt didn't touch it |
+| `not_applicable` | Pattern not relevant to this file |
+
+Without `--before-migration`, `not_migrated` cannot be detected and those files show as `missing` instead.
+
+### LLM Adversarial Review (`--llm-review`)
+
+A converging debate loop:
+
+1. **Critic** identifies high-level migration issues (not line-level -- the deterministic layer handles that)
+2. **Challenger** defends the AI's approach -- is it a valid alternative? 10 engineers would write 10 different migrations.
+3. **Judge** renders verdicts with confidence scores (0.0-1.0)
+4. Repeat until no disputed issues (confidence < 0.7) remain, disputed count stops decreasing, or max rounds hit
+5. **Consolidator** distills verdicts into 3-7 thematic insights
+
+Each agent is an independent `claude -p --output-format json --json-schema` call. Requires the `claude` CLI in PATH.
+
+### Scorecard
+
+`scorecard.json` is designed for tracking improvement across runs:
+
+```
+Tweak agent -> re-run migration -> re-run evaluation -> read scorecard
+                                                      -> compare to previous scorecard
+                                                      -> repeat
+```
+
+Pattern names and descriptions are human-readable so the team can understand results without PatternFly expertise.
+
+### HTML Report Tabs
+
+1. **Value Story** -- "AI agent provides X-point improvement over codemods." Side-by-side grades. What AI got right that codemods missed, and vice versa.
+2. **Problem Areas** -- Grouped by severity. Plain-language descriptions of what went wrong and why it matters. Source-tagged (deterministic vs LLM).
+3. **Scorecard** -- Pattern-by-pattern comparison table. Color-coded, designed to be screenshot-able.
+4. **Evidence** -- Collapsible per-file diffs and LLM debate transcripts (Critic -> Challenger -> Judge reasoning).
+
+## CLI Reference
+
+```
+python3 scripts/run_full_evaluation.py [OPTIONS]
+
+Required:
+  --golden PATH              Expert migration (golden truth)
+  --attempt NAME=PATH        Named migration attempt (repeatable)
+  --output-dir PATH          Where to write artifacts
+
+Optional:
+  --before-migration PATH    Source codebase before any migration
+  --target TARGET            Target-specific patterns (e.g., 'patternfly')
+  --llm-review               Enable LLM adversarial review
+  --max-rounds N             Max debate rounds (default: 3)
+  --no-gumtree               Skip GumTree AST diffing
+```
+
+## Running Individual Scripts
+
+You can also run pipeline steps individually:
+
+```bash
+# Deterministic pipeline only (no LLM)
+python3 scripts/run_evaluation.py \
+  --golden /path/to/golden \
+  --before-migration /path/to/base \
+  --attempt ai-agent=/path/to/ai \
+  --output-dir /tmp/eval \
+  --target patternfly --no-gumtree
+
+# LLM review only (requires deterministic results already produced)
+python3 scripts/run_llm_review.py \
+  --output-dir /tmp/eval \
+  --golden /path/to/golden \
+  --before-migration /path/to/base \
+  --attempt ai-agent=/path/to/ai \
+  --target patternfly --max-rounds 3
+
+# Compose results + scorecard
+python3 scripts/compose_evaluation.py \
+  --output-dir /tmp/eval \
+  --golden /path/to/golden \
+  --before-migration /path/to/base \
+  --attempt ai-agent=/path/to/ai
+
+# Generate HTML report
+python3 scripts/generate_evaluation_report.py /tmp/eval
+```
 
 ## Prerequisites
 
-- [Claude Code](https://code.claude.com/) or [Gemini CLI](https://geminicli.com/)
-- Python 3 (for helper scripts)
-- **Optional**: [GumTree](https://github.com/GumTreeDiff/gumtree) for AST-level diffing. Without it, the skill uses text-only diffing (still produces a useful report). Install via:
-  - `podman pull gumtreediff/gumtree` or `docker pull gumtreediff/gumtree` (container)
-  - Or download the native binary from [GitHub releases](https://github.com/GumTreeDiff/gumtree/releases)
-
-## Setup
-
-### Claude Code
-
-1. Copy `skills/migration-comparison/` (including `scripts/` and `targets/`) to `.claude/skills/migration-comparison/` in your project (or `~/.claude/skills/migration-comparison/` for global availability).
-2. Copy the required agents to `.claude/agents/` in your project (or `~/.claude/agents/`):
-   - `agents/repo-differ.md`
-   - `agents/comparison-report-generator.md`
-3. The skill is auto-discovered by Claude Code when relevant to your conversation. Restart your session after adding new agent files.
-
-See [Claude Code skills docs](https://code.claude.com/docs/en/skills) for more on skill placement and discovery.
-
-### Gemini CLI
-
-1. Copy `skills/migration-comparison/` to `.gemini/skills/migration-comparison/` in your workspace (or `~/.gemini/skills/migration-comparison/`).
-2. Copy the required agents to `.gemini/agents/`:
-   - `agents/repo-differ.md`
-   - `agents/comparison-report-generator.md`
-3. **Uncomment the `tools:` section** in each agent `.md` file. Gemini CLI requires explicit tool declarations in the YAML frontmatter.
-4. Enable experimental agents in your Gemini CLI settings:
-   ```json
-   {
-     "experimental": {
-       "enableAgents": true
-     }
-   }
-   ```
-
-## Subagents
-
-| Subagent | Description |
-|----------|-------------|
-| `repo-differ` | Runs the diff pipeline: file enumeration, AST/text diffing, change categorization |
-| `comparison-report-generator` | Annotates significant changes and generates the HTML comparison report |
-
-## Usage
-
-Start a session in any directory and ask Claude to compare two migration attempts:
-
-```
-Compare the migration in /path/to/agent-output against /path/to/ground-truth
-```
-
-The skill will ask you for:
-- **Reference A** and **Reference B**: local directory paths or git URLs with branches (e.g., `https://github.com/org/repo@branch`)
-- **Labels** for each reference (e.g., "Ground Truth", "Agent A")
-- **File filters** (optional): glob patterns to restrict comparison (e.g., `*.tsx`, `src/**/*.ts`)
-
-The output is a self-contained HTML report at `$WORK_DIR/comparison-report.html`.
-
-## Running Scripts Directly
-
-You can also run the pipeline manually without the skill:
-
-```bash
-# 1. Enumerate files and build manifest
-python3 scripts/enumerate_files.py /path/to/dir_a /path/to/dir_b \
-  --label-a "Ground Truth" --label-b "Agent A" \
-  --output-dir /tmp/workspace
-
-# 2. Run diffs (uses GumTree if available, text diff fallback)
-python3 scripts/run_diffs.py \
-  --manifest /tmp/workspace/file-manifest.json \
-  --dir-a /path/to/dir_a --dir-b /path/to/dir_b \
-  --output-dir /tmp/workspace
-
-# 3. Categorize changes
-python3 scripts/categorize_changes.py \
-  --manifest /tmp/workspace/file-manifest.json \
-  --diff-results /tmp/workspace/diff-results.json \
-  --dir-a /path/to/dir_a --dir-b /path/to/dir_b \
-  --label-a "Ground Truth" --label-b "Agent A" \
-  --output-dir /tmp/workspace
-
-# 4. Score migration quality (optional: add --target patternfly for PF-specific patterns)
-python3 scripts/score_migration.py \
-  --comparison-data /tmp/workspace/comparison-data.json \
-  --dir-a /path/to/dir_a --dir-b /path/to/dir_b \
-  --output-dir /tmp/workspace \
-  --target patternfly
-
-# 5. Generate HTML report (automatically includes scoring if scoring-results.json exists)
-python3 scripts/generate_comparison_report.py /tmp/workspace
-```
-
-### Useful flags
-
-- `python3 scripts/run_diffs.py --check-gumtree` — check GumTree availability without running diffs
-- `python3 scripts/run_diffs.py --no-gumtree ...` — skip GumTree, use text diff only
-- `python3 scripts/enumerate_files.py dir_a dir_b --check-only` — report overlap stats without building full manifest
-- `python3 scripts/enumerate_files.py dir_a dir_b --filter '*.tsx'` — restrict to specific file patterns
-
-## Helper Scripts
-
-| Script | Purpose |
-|--------|---------|
-| `scripts/enumerate_files.py` | Walks two directory trees, computes SHA-256 hashes, classifies files as added/removed/modified/identical |
-| `scripts/run_diffs.py` | Executes GumTree AST diffs (native/podman/docker) with text diff fallback, parallel execution |
-| `scripts/categorize_changes.py` | Assigns change categories: structural, semantic, API changes, cosmetic, additive, subtractive |
-| `scripts/score_migration.py` | Scores migration quality: file coverage, pattern detection, noise analysis |
-| `scripts/generate_comparison_report.py` | Generates a self-contained HTML report from `comparison-data.json` |
-
-## GumTree Support
-
-GumTree provides AST-level diffing for richer change categorization. The skill probes for it in order: native binary, podman, docker.
-
-**Supported file extensions** (based on GumTree's bundled generators):
-
-`.ts`, `.js`, `.py`, `.java`, `.css`, `.go`, `.rs`, `.rb`, `.c`, `.cpp`, `.h`, `.hpp`, `.kt`, `.swift`, `.php`, `.ml`, `.yaml`, `.yml`, `.xml`
-
-**Not supported**: `.tsx`, `.jsx` — these fall back to text diffing automatically.
-
-## Migration Quality Scoring
-
-The pipeline includes a quality scoring step that evaluates migration candidates against a reference. The score is computed from three weighted components:
-
-- **File Coverage (20%)**: proportion of reference files present in the candidate
-- **Pattern Score (65%)**: weighted accuracy of migration pattern application (target-specific when `--target` is used, heuristic-based otherwise)
-- **Noise Penalty (15%)**: deductions for debug artifacts, placeholder tokens, formatting-only changes, and unnecessary modifications
-
-Grade scale: A ≥ 90, B ≥ 80, C ≥ 70, D ≥ 60, F < 60.
-
-When a `--target` is specified, the scorer loads pattern detectors from `targets/<target>_patterns.py`. These detectors use tree-sitter AST analysis (for TSX/TS files) and regex on diff text to check whether specific migration patterns were correctly applied.
-
-### Available Targets
-
-| Target | Description | Patterns |
-|--------|-------------|----------|
-| `patternfly` | PatternFly 5 → 6 migration | 24 patterns (12 trivial, 9 moderate, 3 complex) |
-
-### Tree-sitter Dependencies
-
-The scoring step requires `tree-sitter` and `tree-sitter-typescript` for AST analysis. Install them via:
-
-```bash
-pip install tree-sitter>=0.23 tree-sitter-typescript>=0.23
-```
-
-Or use the provided wrapper script (`scripts/run_pipeline.sh`) which automatically sets up a virtual environment with the required dependencies.
-
-## Known Limitations
-
-- GumTree's Docker image does not include generators for `.tsx`/`.jsx` files; these use text diff
-- GumTree may exit 0 on unsupported files with no output; the scripts detect this and fall back to text diff
-- AST diffing is skipped for files larger than 1MB
-- Side-by-side view in the HTML report truncates diffs longer than 200 lines
-- Subagents run in isolation and do not share conversation history with the main agent
+- Python 3.10+
+- `pydantic` (`pip install pydantic`)
+- `claude` CLI in PATH (for `--llm-review`)
+- Optional: `tree-sitter` + `tree-sitter-typescript` for AST analysis in pattern detectors
+- Optional: GumTree for AST-level diffing (text diff works fine without it)

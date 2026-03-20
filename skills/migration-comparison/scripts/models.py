@@ -38,6 +38,7 @@ class PatternStatus(str, Enum):
     incorrect = "incorrect"
     missing = "missing"
     file_missing = "file_missing"
+    not_migrated = "not_migrated"
     not_applicable = "not_applicable"
 
 
@@ -245,6 +246,7 @@ class LLMSummary(BaseModel):
 class EvaluationMetadata(BaseModel):
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     golden_dir: str = ""
+    before_migration_dir: str | None = None
     attempts: dict[str, str] = Field(default_factory=dict)
     target: str | None = None
 

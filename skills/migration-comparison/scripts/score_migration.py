@@ -115,6 +115,21 @@ _LINE_SEARCH_PATTERNS: dict[str, dict[str, str]] = {
 }
 
 
+def _file_matches_before(path: str, dir_b: str, before_dir: str) -> bool:
+    """Check if a candidate file is identical to its before-migration version.
+
+    If True, the attempt didn't migrate this file at all.
+    """
+    cand = Path(dir_b) / path
+    before = Path(before_dir) / path
+    try:
+        if not cand.exists() or not before.exists():
+            return False
+        return cand.read_bytes() == before.read_bytes()
+    except OSError:
+        return False
+
+
 def _invert_diff(diff_text: str | None) -> str | None:
     """Invert a unified diff by swapping added/removed lines.
 
@@ -349,6 +364,7 @@ def run_pattern_detectors(
     comparison_data: dict[str, Any],
     dir_a: str,
     dir_b: str,
+    before_migration_dir: str | None = None,
 ) -> list[dict[str, Any]]:
     """Run each pattern detector against modified and removed files.
 
@@ -522,6 +538,17 @@ def run_pattern_detectors(
                     }
                 status = result.get("status", "not_applicable")
 
+            # Override: if the candidate file is identical to the
+            # before-migration source, the attempt never migrated it.
+            if (
+                status != "not_applicable"
+                and not fd["file_missing"]
+                and before_migration_dir
+                and _file_matches_before(fd["path"], dir_b, before_migration_dir)
+            ):
+                status = "not_migrated"
+                result["message"] = "File unchanged from before migration"
+
             if status != "not_applicable":
                 files_checked.append(fd["path"])
                 # Enrich with line number and absolute path
@@ -537,15 +564,22 @@ def run_pattern_detectors(
                     "message": result.get("message", ""),
                 })
 
-                # Aggregate: correct > incorrect > missing/file_missing > not_applicable
+                # Aggregate: correct > incorrect > not_migrated > missing/file_missing > not_applicable
                 if status == "correct" and aggregate_status in (
                     "not_applicable",
                     "missing",
                     "file_missing",
+                    "not_migrated",
                 ):
                     aggregate_status = "correct"
                 elif status == "incorrect":
                     aggregate_status = "incorrect"
+                elif status == "not_migrated" and aggregate_status in (
+                    "not_applicable",
+                    "missing",
+                    "file_missing",
+                ):
+                    aggregate_status = "not_migrated"
                 elif status in ("missing", "file_missing") and aggregate_status == "not_applicable":
                     aggregate_status = status
 
@@ -572,6 +606,7 @@ def _summarize_pattern(
     correct = sum(1 for d in details if d["status"] == "correct")
     incorrect = sum(1 for d in details if d["status"] == "incorrect")
     missing = sum(1 for d in details if d["status"] == "missing")
+    not_migrated = sum(1 for d in details if d["status"] == "not_migrated")
     total = len(details)
 
     parts: list[str] = []
@@ -581,19 +616,22 @@ def _summarize_pattern(
         parts.append(f"{incorrect}/{total} incorrect")
     if missing:
         parts.append(f"{missing}/{total} missing")
+    if not_migrated:
+        parts.append(f"{not_migrated}/{total} not migrated")
     return ", ".join(parts) if parts else f"Status: {status}"
 
 
 def compute_pattern_score(results: list[dict[str, Any]]) -> dict[str, Any]:
     """Compute weighted pattern score from pattern results.
 
-    CORRECT=1.0, INCORRECT=0.25, MISSING=0, NOT_APPLICABLE=excluded.
+    CORRECT=1.0, INCORRECT=0, MISSING=0, NOT_APPLICABLE=excluded.
     """
     credit_map: dict[str, float] = {
         "correct": 1.0,
-        "incorrect": 0.25,
+        "incorrect": 0.0,
         "missing": 0.0,
         "file_missing": 0.0,
+        "not_migrated": 0.0,
     }
 
     total_weighted = 0.0
@@ -883,6 +921,11 @@ def main() -> None:
         help="Directory containing target pattern files (default: ../targets relative to this script)",
     )
     parser.add_argument(
+        "--before-migration",
+        default=None,
+        help="Path to the source codebase before any migration was applied",
+    )
+    parser.add_argument(
         "--label",
         default=None,
         help="Semantic label for this scoring run (e.g., 'golden-vs-ai-agent')",
@@ -922,7 +965,8 @@ def main() -> None:
         if patterns:
             print(f"Loaded {len(patterns)} patterns for target '{args.target}'")
             pattern_results = run_pattern_detectors(
-                patterns, comparison_data, args.dir_a, args.dir_b
+                patterns, comparison_data, args.dir_a, args.dir_b,
+                before_migration_dir=args.before_migration,
             )
             pattern_score_data = compute_pattern_score(pattern_results)
         else:

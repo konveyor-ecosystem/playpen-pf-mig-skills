@@ -93,12 +93,12 @@ def categorize_text_diff(diff_text: str | None) -> set[str]:
     if not non_import_adds and not non_import_removes:
         return categories
 
-    # Pure additions (no removals beyond imports)
-    if added_stripped and not [l for l in removed_stripped if l not in [x.strip() for x in import_removes]]:
+    # Pure additions (non-import content added, no non-import content removed)
+    if non_import_adds and not non_import_removes:
         categories.add("additive")
 
-    # Pure removals (no additions beyond imports)
-    if removed_stripped and not [l for l in added_stripped if l not in [x.strip() for x in import_adds]]:
+    # Pure removals (non-import content removed, no non-import content added)
+    if non_import_removes and not non_import_adds:
         categories.add("subtractive")
 
     # Mixed changes -> semantic

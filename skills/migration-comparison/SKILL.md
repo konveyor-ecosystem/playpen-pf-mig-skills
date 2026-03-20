@@ -119,179 +119,46 @@ Include the overall quality grade and percentage if scoring was performed.
 
 ## Evaluation Mode
 
-Evaluation mode answers: **How well did an AI migration perform vs the golden truth (SME expert)?** It runs both deterministic pattern detection and adversarial LLM review.
+Evaluation mode answers: **How well did an AI migration perform vs the golden truth (SME expert)?** It runs deterministic pattern detection and optionally an adversarial LLM review.
 
 ### E1. Collect Inputs
 
 Ask the user for:
 - **Golden truth directory**: the expert-produced migration (local path or git URL with branch)
 - **Attempts**: one or more named migration attempts to evaluate. Each has a name and a path/URL. Example: `ai-agent=/path/to/ai-output`, `codemods=/path/to/codemods-output`
-- **Migration target** (optional): e.g., `patternfly` — enables target-specific pattern detectors and loads default runtime validation config from `targets/<target>_runtime.yaml`
-- **Runtime validation**: Ask the user: "Are there runtime validation steps for this migration? How do you verify the app works?" Examples:
-  - PatternFly: "run `npm run dev`, screenshot these routes, compare visually"
-  - Spring: "run `mvn spring-boot:run`, hit health endpoint, run integration tests"
-  - CLI tool: "run these commands, compare output"
-  - If a target is specified and a `targets/<target>_runtime.yaml` exists, **offer to use the defaults**: "I found a default runtime config for <target>. Use it, customize it, or skip runtime validation?"
+- **Migration target** (optional): e.g., `patternfly` — enables target-specific pattern detectors
+- **LLM review** (optional): whether to run the adversarial LLM review loop for semantic analysis
 
-### E2. Deterministic Pipeline
+### E2. Run Full Evaluation
 
-Run the deterministic evaluation pipeline for all attempts against the golden truth:
+Run the full evaluation pipeline:
 
 ```bash
-python3 scripts/run_evaluation.py \
+python3 scripts/run_full_evaluation.py \
   --golden <golden_dir> \
   --attempt <name>=<path> \
   [--attempt <name2>=<path2> ...] \
   --output-dir $WORK_DIR \
-  [--target <target>]
+  [--target <target>] \
+  [--llm-review] \
+  [--max-rounds 3]
 ```
 
-This runs enumerate → diff → categorize → score for each attempt, producing pairwise artifacts in `$WORK_DIR/golden-vs-<name>/`.
+This single command runs:
+1. **Deterministic pipeline**: enumerate → diff → categorize → score for each attempt
+2. **LLM adversarial review** (if `--llm-review`): converging debate loop (Critic → Challenger → Judge) using `claude -p`, then consolidation into high-level themes
+3. **Results composition**: cross-attempt comparison, problem areas, scorecard
+4. **HTML report generation**: 4-tab report with value story, problem areas, scorecard, and evidence
 
 **If the script reports errors**, surface them to the user and ask whether to continue.
 
-### E3. Runtime Validation
-
-**If runtime validation is configured** (either from user input or target runtime config):
-
-Delegate to `runtime-validator` subagent with:
-- The golden truth directory path
-- The list of attempt `(name, path)` pairs
-- The validation config (from `targets/<target>_runtime.yaml` or user-provided steps)
-- Output directory: `$WORK_DIR`
-
-The subagent validates the golden truth first (baseline), then each attempt, capturing evidence:
-- Test results (pass/fail counts, failure messages)
-- Screenshots (if Chrome MCP is available and routes are configured)
-- Health check responses
-- Build/launch errors
-
-**Output**: `$WORK_DIR/runtime-validation.json`
-
-**If runtime validation is not configured**, skip this step. The adversarial agents will still run but without runtime evidence.
-
-### E4. Adversarial Review
-
-#### Selecting files
-
-Select files for adversarial review from the pairwise `comparison-data.json` files. The structure is:
-
-```json
-{
-  "files": {
-    "added": [{"path": "...", ...}],
-    "removed": [{"path": "...", ...}],
-    "modified": [{"path": "...", "categories": [...], "text_diff": "...", ...}]
-  }
-}
-```
-
-Review **all files in `files.modified`** that have meaningful diffs. Also review files in `files.added` (present in attempt but not golden — may indicate unnecessary additions). Skip `files.removed` (present in golden but not attempt — already penalized by deterministic scoring). Skip files where `categories` is only `["cosmetic"]`. Skip lock files, snapshots, and other generated artifacts (e.g., `package-lock.json`, `*.snap`).
-
-#### Preparing diffs
-
-For each selected file, generate a unified diff:
-```bash
-diff -u <golden_file> <attempt_file> > $WORK_DIR/adversarial/<attempt>/<filename>/diff.txt
-```
-
-Create the output directory structure: `$WORK_DIR/adversarial/<attempt>/<filename>/` for each file.
-
-#### Loading runtime evidence
-
-Load runtime evidence from `$WORK_DIR/runtime-validation.json` if it exists. For each file being reviewed, extract relevant runtime evidence:
-- Test failures that reference the file
-- Screenshots showing pages that include the file's components
-- Build errors mentioning the file
-
-#### Running the three-agent pipeline
-
-For each attempt, process files in parallel batches. For each file, run the three agents **sequentially** (each depends on the previous):
-
-1. **Delegate to `bug-finder` subagent** with:
-   - The golden truth file content (include inline — **do not rely on the subagent reading files from disk**)
-   - The attempt's file content (include inline)
-   - The unified diff between them
-   - The deterministic pattern results for this file (from `scoring-results.json`)
-   - Runtime evidence for this file and attempt (if available)
-   - Instruction to return JSON in the format specified by the bug-finder agent
-
-2. **Delegate to `adversary` subagent** with:
-   - The golden truth file content (include inline)
-   - The attempt's file content (include inline)
-   - The bug-finder's issue list (from step 1 — paste the JSON directly)
-   - Instruction to return JSON in the format specified by the adversary agent
-
-3. **Delegate to `referee` subagent** with:
-   - The golden truth file content (include inline, presented as "ground truth")
-   - The attempt's file content (include inline)
-   - Each issue with both bug-finder and adversary arguments (paste inline)
-   - Runtime evidence for this file and attempt (if available)
-   - Instruction to return JSON in the format specified by the referee agent
-
-**Important: Subagents may not have write permissions.** After each agent completes, **you (the orchestrator) must extract the JSON from the agent's response** and write it to the expected output path yourself:
-- `$WORK_DIR/adversarial/<attempt>/<filename>/bug-finder.json`
-- `$WORK_DIR/adversarial/<attempt>/<filename>/adversary.json`
-- `$WORK_DIR/adversarial/<attempt>/<filename>/referee.json`
-
-#### Consolidating results
-
-After all files are processed, consolidate per-file referee results into `$WORK_DIR/llm-assessment.json` with the structure:
-
-```json
-{
-  "metadata": { "files_assessed": 25 },
-  "file_assessments": [
-    {
-      "attempt": "ai-agent",
-      "file": "src/components/AppHeader.tsx",
-      "issues": [
-        {
-          "id": "issue-1",
-          "description": "...",
-          "severity": "high",
-          "impact_score": 10,
-          "bug_finder_argument": "...",
-          "adversary_argument": "...",
-          "referee_verdict": "real",
-          "referee_confidence": 0.9
-        }
-      ],
-      "summary_score": 0.6
-    }
-  ]
-}
-```
-
-### E5. Compose Results
-
-Run the results composition script:
-
-```bash
-python3 scripts/compose_evaluation.py \
-  --output-dir $WORK_DIR \
-  --golden <golden_dir> \
-  --attempt <name>=<path> \
-  [--attempt <name2>=<path2> ...] \
-  [--target <target>]
-```
-
-This produces `$WORK_DIR/evaluation-results.json` with composite scores, cross-attempt comparisons, and problem areas.
-
-### E6. Generate Report
-
-```bash
-python3 scripts/generate_evaluation_report.py $WORK_DIR
-```
-
-This produces `$WORK_DIR/evaluation-report.html`.
-
-### E7. Output
+### E3. Output
 
 Tell the user:
 
 ```
 Evaluation report: $WORK_DIR/evaluation-report.html
+Scorecard: $WORK_DIR/scorecard.json
 
 Results per attempt:
   <name>: <composite_grade> (<composite_percent>%)
@@ -301,6 +168,8 @@ Problem areas identified: <count>
   [TOP 3 problem areas with severity and description]
 ```
 
+The scorecard is designed for cross-run comparison: tweak the agent, re-run migration, re-run evaluation, check if specific patterns improved without regressions.
+
 ---
 
 ## Guidelines
@@ -309,5 +178,3 @@ Problem areas identified: <count>
 - **Ask the user when something goes wrong** — don't guess or abort without asking.
 - **GumTree is optional** — the skill works with text-only diffing. GumTree adds richer AST-level categorization but is not required.
 - **Keep the workspace clean** — all outputs go in `$WORK_DIR`.
-- **Both layers run by default** — the adversarial LLM review is not optional. The team lacks deep domain expertise, so LLM judges are essential for catching issues detectors miss.
-- **All files with meaningful diffs get adversarial review** — skip only identical files and trivial whitespace-only changes.
