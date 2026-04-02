@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "migeval"
+version = "2.0.0"
+description = "Migration health evaluation tool — evaluates migration attempts on absolute quality"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0",
+    "click>=8.0",
+    "pyyaml>=6.0",
+    "claude-agent-sdk>=0.1.54",
+]
+
+[project.optional-dependencies]
+llm = ["openai>=1.0"]
+playwright = ["playwright>=1.40"]
+dev = [
+    "mypy>=1.8",
+    "types-PyYAML",
+    "pytest>=8.0",
+]
+
+[project.scripts]
+migeval = "migeval.cli:main"
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "openai",
+    "openai.*",
+    "playwright.*",
+    "claude_agent_sdk",
+    "claude_agent_sdk.*",
+]
+ignore_missing_imports = true
