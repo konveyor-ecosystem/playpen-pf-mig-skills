@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from openai import OpenAI
+
 
 @dataclass
 class TokenUsage:
@@ -31,32 +33,23 @@ class SimpleLlmClient:
         """Render template and send to LLM."""
         rendered = render_template(template, variables)
 
-        try:
-            from openai import OpenAI
+        client = OpenAI(
+            api_key=self.api_key or None,
+            base_url=self.base_url or None,
+        )
 
-            client = OpenAI(
-                api_key=self.api_key or None,
-                base_url=self.base_url or None,
-            )
+        response = client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": rendered}],
+            temperature=0.2,
+        )
 
-            response = client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "user", "content": rendered}],
-                temperature=0.2,
-            )
+        self.usage.total_calls += 1
+        if response.usage:
+            self.usage.prompt_tokens += response.usage.prompt_tokens
+            self.usage.completion_tokens += response.usage.completion_tokens
 
-            self.usage.total_calls += 1
-            if response.usage:
-                self.usage.prompt_tokens += response.usage.prompt_tokens
-                self.usage.completion_tokens += response.usage.completion_tokens
-
-            return response.choices[0].message.content or ""
-
-        except ImportError:
-            raise RuntimeError(
-                "openai package required for LLM features. "
-                "Install with: uv pip install 'migeval[llm]'"
-            )
+        return response.choices[0].message.content or ""
 
 
 def render_template(template: str, variables: dict[str, str]) -> str:

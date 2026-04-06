@@ -177,7 +177,10 @@ class SourceLayer:
                         severity="warning",
                         file="package.json",
                         title=f"Missing dependency: {expected.name}",
-                        detail=f"Expected {expected.name} {expected.version} but not found",
+                        detail=(
+                            f"Expected {expected.name} {expected.version}"
+                            " but not found"
+                        ),
                         suggestion=f"Add {expected.name}@{expected.version}",
                     )
                 )

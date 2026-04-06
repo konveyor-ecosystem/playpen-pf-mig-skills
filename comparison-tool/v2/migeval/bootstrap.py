@@ -11,6 +11,10 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
+from claude_agent_sdk import ClaudeAgentOptions
+
+from migeval.util.agent import run_agent_query
+
 SYSTEM_PROMPT = r'''You are an expert at building migration evaluation targets for the `migeval` tool.
 Your job is to research a framework migration thoroughly and generate target
 files that migeval uses to evaluate migration attempts.
@@ -217,8 +221,6 @@ def run_bootstrap(
     """Run the bootstrap agent to generate a complete target package."""
 
     async def _run() -> None:
-        from claude_agent_sdk import ClaudeAgentOptions
-
         file_tree = f"""{output_dir}/
 ├── target.yaml
 ├── agent_hints.md
@@ -262,8 +264,6 @@ Steps:
 
 Start by searching the web for the migration guide and breaking changes."""
             cwd = str(output_dir)
-
-        from migeval.util.agent import run_agent_query
 
         await run_agent_query(
             prompt=prompt,

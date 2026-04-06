@@ -5,6 +5,18 @@ from __future__ import annotations
 import sys
 from typing import Any
 
+from claude_agent_sdk import (
+    AssistantMessage,
+    ClaudeAgentOptions,
+    ResultMessage,
+    SystemMessage,
+    TextBlock,
+    ThinkingBlock,
+    ToolResultBlock,
+    ToolUseBlock,
+    query,
+)
+
 
 def log_agent(prefix: str, msg: str) -> None:
     """Log an agent progress message to stderr."""
@@ -13,7 +25,7 @@ def log_agent(prefix: str, msg: str) -> None:
 
 async def run_agent_query(
     prompt: str,
-    options: Any,
+    options: ClaudeAgentOptions,
     prefix: str = "agent",
 ) -> str:
     """Run an Agent SDK query with progress logging.
@@ -21,17 +33,6 @@ async def run_agent_query(
     Logs tool calls, text output, and usage info to stderr.
     Returns the final result text.
     """
-    from claude_agent_sdk import (
-        AssistantMessage,
-        ResultMessage,
-        SystemMessage,
-        TextBlock,
-        ThinkingBlock,
-        ToolResultBlock,
-        ToolUseBlock,
-        query,
-    )
-
     result_text = ""
     turn = 0
 
@@ -40,7 +41,9 @@ async def run_agent_query(
             subtype = getattr(message, "subtype", "")
             if subtype == "init":
                 data = getattr(message, "data", {}) or {}
-                session_id = data.get("session_id", "") if isinstance(data, dict) else ""
+                session_id = (
+                    data.get("session_id", "") if isinstance(data, dict) else ""
+                )
                 log_agent(prefix, f"Session started: {str(session_id)[:12]}...")
 
         elif isinstance(message, AssistantMessage):
@@ -81,7 +84,10 @@ async def run_agent_query(
             result_text = str(message.result or "")
             cost = message.total_cost_usd
             if cost:
-                log_agent(prefix, f"Done (cost: ${cost:.4f}, {message.num_turns} turns)")
+                log_agent(
+                    prefix,
+                    f"Done (cost: ${cost:.4f}, {message.num_turns} turns)",
+                )
             else:
                 log_agent(prefix, f"Done ({message.num_turns} turns)")
 
@@ -90,7 +96,7 @@ async def run_agent_query(
             msg_type = type(message).__name__
             # TaskProgress, RateLimitEvent, etc.
             if hasattr(message, "subtype"):
-                log_agent(prefix, f"{msg_type}: {message.subtype}")  # type: ignore[union-attr]
+                log_agent(prefix, f"{msg_type}: {message.subtype}")
 
     return result_text
 

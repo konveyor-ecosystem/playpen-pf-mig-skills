@@ -4,24 +4,33 @@ from __future__ import annotations
 
 import json
 import sys
-import time
-from datetime import datetime, timezone
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from migeval.comparison import compare_attempts
 from migeval.config import load_project_config, resolve_target
+from migeval.layers.build import BuildLayer
+from migeval.layers.llm_review import LlmReviewLayer
+from migeval.layers.runtime import RuntimeLayer
+from migeval.layers.source import SourceLayer
 from migeval.models import (
     AttemptResult,
     EvaluationRun,
     LayerContext,
     LayerName,
     LayerResult,
+    ProjectConfig,
     RegressionItem,
     Severity,
+    TargetConfig,
 )
 from migeval.regression import compute_regressions
+from migeval.reporting.json_report import write_json_report
+from migeval.reporting.markdown_report import generate_markdown_report
 
 
 def _log(msg: str) -> None:
@@ -30,7 +39,7 @@ def _log(msg: str) -> None:
 
 
 def _warn_missing_config(
-    target: Any, enabled_layers: Sequence[str]
+    target: TargetConfig, enabled_layers: Sequence[str]
 ) -> None:
     """Warn about missing target config that could be bootstrapped."""
     warnings: list[str] = []
@@ -51,11 +60,14 @@ def _warn_missing_config(
             f"Target '{target_name}' has no build config"
         )
 
-    if "runtime" in enabled_layers:
-        if target.runtime is None and not (target.target_dir / "runtime.py").exists():
-            warnings.append(
-                f"Target '{target_name}' has no runtime config or runtime.py"
-            )
+    if (
+        "runtime" in enabled_layers
+        and target.runtime is None
+        and not (target.target_dir / "runtime.py").exists()
+    ):
+        warnings.append(
+            f"Target '{target_name}' has no runtime config or runtime.py"
+        )
 
     if "llm" in enabled_layers:
         hints_path = target.target_dir / "agent_hints.md"
@@ -93,11 +105,6 @@ def run_evaluation(
     llm_max_rounds: int = 3,
 ) -> EvaluationRun:
     """Run the full evaluation pipeline."""
-    from migeval.layers.build import BuildLayer
-    from migeval.layers.llm_review import LlmReviewLayer
-    from migeval.layers.runtime import RuntimeLayer
-    from migeval.layers.source import SourceLayer
-
     target = resolve_target(target_name, target_dir)
     project = load_project_config(config_path) if config_path else None
 
@@ -117,7 +124,7 @@ def run_evaluation(
     # Warn about missing target config
     _warn_missing_config(target, enabled_layers)
 
-    _log(f"migeval v2.0 — Migration Health Evaluation")
+    _log("migeval v2.0 — Migration Health Evaluation")
     _log("━" * 40)
     _log(f"Before:  {before_path}")
     _log(f"Target:  {target.name}")
@@ -199,7 +206,7 @@ def run_evaluation(
             previous_run = EvaluationRun.model_validate(prev_data)
             regressions = compute_regressions(
                 EvaluationRun(
-                    timestamp=datetime.now(timezone.utc).isoformat(),
+                    timestamp=datetime.now(UTC).isoformat(),
                     target=target_name,
                     before=before_result,
                     attempts=attempt_results,
@@ -212,7 +219,7 @@ def run_evaluation(
             _log(f"Warning: Could not load previous run: {e}")
 
     run = EvaluationRun(
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
         target=target_name,
         before=before_result,
         attempts=attempt_results,
@@ -232,10 +239,10 @@ def run_evaluation(
 def _evaluate_codebase(
     name: str,
     path: Path,
-    target: Any,
-    project: Any,
+    target: TargetConfig,
+    project: ProjectConfig | None,
     layer_instances: dict[LayerName, Any],
-    violations_data: Any,
+    violations_data: dict[str, Any] | None,
     output_dir: Path | None = None,
 ) -> AttemptResult:
     """Run all enabled layers on a single codebase."""
@@ -319,21 +326,20 @@ def _evaluate_codebase(
     )
 
 
-def _load_violations(path: Path) -> Any:
+def _load_violations(path: Path) -> dict[str, Any] | None:
     """Load violations from a YAML or JSON file."""
-    import yaml
-
     with open(path) as f:
         if path.suffix in (".yaml", ".yml"):
-            return yaml.safe_load(f)
-        return json.load(f)
+            data: Any = yaml.safe_load(f)
+        else:
+            data = json.load(f)
+    if isinstance(data, dict):
+        return data
+    return None
 
 
 def _write_outputs(run: EvaluationRun, output_dir: Path) -> None:
     """Write evaluation.json and report.md to output_dir."""
-    from migeval.reporting.json_report import write_json_report
-    from migeval.reporting.markdown_report import generate_markdown_report
-
     write_json_report(run, output_dir / "evaluation.json")
     md = generate_markdown_report(run)
     (output_dir / "report.md").write_text(md)

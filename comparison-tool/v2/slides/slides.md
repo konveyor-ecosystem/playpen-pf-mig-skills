@@ -14,7 +14,7 @@ date: "April 2026"
 - Manual review doesn't scale
 - "Does it compile?" is necessary but not sufficient
 
-## v1 required a "golden truth"
+## Is a "golden truth" required?
 
 - Human-authored reference migration to grade against
 - Good golden truths are hard to produce
@@ -23,8 +23,6 @@ date: "April 2026"
 
 ## What we actually need
 
-> "The eval framework should OUTPUT specific things that are breaking."
-
 - Evaluate on **absolute quality**, not similarity
 - Does it build? Are old patterns still there? What's broken?
 - Compare N migration attempts against each other
@@ -32,7 +30,7 @@ date: "April 2026"
 
 ---
 
-# The Solution
+# Proposal
 
 ## migeval v2
 
@@ -60,7 +58,7 @@ migeval evaluate \
 ## Four layers
 
 ```
-     LLM Review     <-- AI reviews all evidence
+     LLM Review      <-- AI reviews all evidence
       Runtime        <-- runs the app, captures behavior
        Build         <-- compiles, captures errors
       Source         <-- scans code: regex + detectors

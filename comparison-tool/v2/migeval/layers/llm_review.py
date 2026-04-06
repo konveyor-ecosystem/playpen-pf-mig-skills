@@ -4,17 +4,22 @@ Implements the adversarial debate loop:
 Critic ↔ Challenger (iterative) → Judge → Consolidator.
 
 Each role is a Claude agent with its own system prompt loaded from
-the target's prompts/ directory.
+the target's prompts/ directory. The Critic and Challenger have
+read-only access to the codebase via Read, Grep, and Glob tools.
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
-import re
 import time
 from pathlib import Path
 from typing import Any
+
+from claude_agent_sdk import (
+    AgentDefinition,
+    ClaudeAgentOptions,
+)
 
 from migeval.models import (
     Issue,
@@ -26,7 +31,11 @@ from migeval.models import (
     make_issue_id,
 )
 from migeval.prompts import load_prompt
+from migeval.util.agent import run_agent_query
 from migeval.util.llm import render_template
+
+# Tools that give agents read-only codebase access
+_CODE_TOOLS = ["Read", "Grep", "Glob"]
 
 
 class LlmReviewLayer:
@@ -71,6 +80,7 @@ class LlmReviewLayer:
         # Template variables shared across roles
         base_vars: dict[str, str] = {
             "migration_description": target.name,
+            "codebase_path": str(path.resolve()),
             "issues_summary": evidence["issues_summary"],
             "build_output": evidence["build_output"],
             "runtime_evidence": evidence["runtime_evidence"],
@@ -80,7 +90,9 @@ class LlmReviewLayer:
 
         try:
             result = asyncio.run(
-                self._run_debate(target.target_dir, base_vars, context, metadata)
+                self._run_debate(
+                    path, target.target_dir, base_vars, context, metadata
+                )
             )
         except Exception as e:
             metadata["error"] = str(e)
@@ -104,16 +116,13 @@ class LlmReviewLayer:
 
     async def _run_debate(
         self,
+        codebase_path: Path,
         target_dir: Path,
         base_vars: dict[str, str],
         context: LayerContext,
         metadata: dict[str, Any],
     ) -> list[Issue]:
         """Run the full adversarial debate using Claude Agent SDK."""
-        from claude_agent_sdk import (
-            AgentDefinition,
-            ClaudeAgentOptions,
-        )
 
         # Load prompt templates (target override → bundled default)
         critic_tmpl = load_prompt("critic.md", target_dir)
@@ -137,17 +146,17 @@ class LlmReviewLayer:
 
         # Render system prompts for each role
         critic_prompt = render_template(critic_tmpl, base_vars)
-        challenger_prompt = render_template(
-            challenger_tmpl,
-            {**base_vars, "critic_issues": "{{critic_issues}}"},
-        )
+
+        codebase = str(codebase_path.resolve())
 
         # Build the orchestration prompt
         orchestration_prompt = f"""You are orchestrating an adversarial migration review debate.
 
+The codebase under review is at: {codebase}
+
 Run this loop for up to {self.max_rounds} rounds:
-1. Delegate to the "critic" agent — it will identify potential migration issues
-2. Delegate to the "challenger" agent — give it the critic's findings to push back on
+1. Delegate to the "critic" agent — it will explore the codebase and identify potential migration issues
+2. Delegate to the "challenger" agent — give it the critic's findings to push back on (the challenger can also read the code to verify claims)
 3. If the critic's findings haven't changed much from the previous round, stop the loop
 
 After the loop:
@@ -170,14 +179,14 @@ Runtime evidence:
         # Define agents for each debate role
         agents = {
             "critic": AgentDefinition(
-                description="Migration critic — identifies all potential issues with wide net",
+                description="Migration critic — explores codebase and identifies all potential issues",
                 prompt=critic_prompt,
-                tools=[],
+                tools=_CODE_TOOLS,
             ),
             "challenger": AgentDefinition(
-                description="Challenger — pushes back on critic's findings, identifies false positives",
+                description="Challenger — reads code to verify/refute critic's findings",
                 prompt=render_template(challenger_tmpl, base_vars),
-                tools=[],
+                tools=_CODE_TOOLS,
             ),
             "judge": AgentDefinition(
                 description="Judge — resolves disputes between critic and challenger",
@@ -199,14 +208,13 @@ Runtime evidence:
         }
 
         # Run the orchestration
-        from migeval.util.agent import run_agent_query
-
         full_response = await run_agent_query(
             prompt=orchestration_prompt,
             options=ClaudeAgentOptions(
-                allowed_tools=["Agent"],
+                allowed_tools=["Agent"] + _CODE_TOOLS,
                 agents=agents,
                 permission_mode="acceptEdits",
+                cwd=codebase,
             ),
             prefix="llm-review",
         )
@@ -259,7 +267,7 @@ def _parse_llm_issues(response: str) -> list[Issue]:
         if cleaned.startswith("```"):
             # Strip markdown code fences
             lines = cleaned.split("\n")
-            lines = [l for l in lines if not l.strip().startswith("```")]
+            lines = [ln for ln in lines if not ln.strip().startswith("```")]
             cleaned = "\n".join(lines)
 
         # Try parsing as a JSON object first (may have a "findings" key)

@@ -35,9 +35,27 @@ warn_unused_configs = true
 [[tool.mypy.overrides]]
 module = [
     "openai",
-    "openai.*",
-    "playwright.*",
     "claude_agent_sdk",
     "claude_agent_sdk.*",
 ]
 ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"migeval/bootstrap.py" = ["E501"]
+"migeval/layers/llm_review.py" = ["E501"]
+"migeval/layers/runtime.py" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["migeval"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.9",
+]

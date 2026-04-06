@@ -5,10 +5,14 @@ Runs install + build commands and parses error output.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import re
 import time
 from pathlib import Path
 from typing import Any
+
+from claude_agent_sdk import ClaudeAgentOptions
 
 from migeval.config import merge_configs
 from migeval.models import (
@@ -20,7 +24,10 @@ from migeval.models import (
     TargetConfig,
     make_issue_id,
 )
-from migeval.util.subproc import run_command
+from migeval.prompts import load_prompt
+from migeval.util.agent import run_agent_query
+from migeval.util.llm import render_template
+from migeval.util.subproc import RunResult, run_command
 
 
 class BuildLayer:
@@ -103,16 +110,17 @@ class BuildLayer:
                         source="build_error",
                         severity="high",
                         title="Build failed",
-                        detail=f"Build command failed with exit code {build_result.exit_code}",
+                        detail=(
+                            f"Build command failed with exit code"
+                            f" {build_result.exit_code}"
+                        ),
                         evidence=combined_output[:2000],
                     )
                 )
 
-            # LLM error analysis via Agent SDK
-            try:
+            # LLM error analysis via Agent SDK (best-effort)
+            with contextlib.suppress(Exception):
                 _agent_analyze_build(target, merged, build_result, metadata)
-            except Exception:
-                pass  # LLM analysis is best-effort
 
         elapsed = time.monotonic() - start
         return LayerResult(
@@ -169,20 +177,14 @@ def _parse_build_errors(output: str) -> list[dict[str, Any]]:
 def _agent_analyze_build(
     target: TargetConfig,
     merged: TargetConfig,
-    build_result: Any,
+    build_result: RunResult,
     metadata: dict[str, Any],
 ) -> None:
     """Use Claude Agent SDK to analyze build failures. Best-effort."""
-    import asyncio
-
-    from migeval.prompts import load_prompt
-
     template = load_prompt("build_analyze.md", target.target_dir)
     if template is None:
         return
     assert merged.build is not None
-
-    from migeval.util.llm import render_template
 
     prompt = render_template(template, {
         "migration_description": target.name,
@@ -192,10 +194,6 @@ def _agent_analyze_build(
     })
 
     async def _run() -> str:
-        from claude_agent_sdk import ClaudeAgentOptions
-
-        from migeval.util.agent import run_agent_query
-
         return await run_agent_query(
             prompt=prompt,
             options=ClaudeAgentOptions(

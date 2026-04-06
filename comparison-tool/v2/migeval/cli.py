@@ -2,13 +2,24 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
 from pathlib import Path
 
 import click
+from claude_agent_sdk import (
+    AssistantMessage,
+    ClaudeAgentOptions,
+    ResultMessage,
+    query,
+)
 
-from migeval.models import LayerName
+from migeval.bootstrap import run_bootstrap
+from migeval.models import EvaluationRun, LayerName
+from migeval.orchestrator import run_evaluation
+from migeval.regression import compute_regressions
+from migeval.reporting.markdown_report import generate_markdown_report
 
 
 def _parse_name_path(value: str) -> tuple[str, Path]:
@@ -38,7 +49,11 @@ def main() -> None:
 )
 @click.option("--target", "target_name", type=str, help="Bundled target name")
 @click.option("--target-dir", type=str, help="External target directory")
-@click.option("--config", "config_path", type=click.Path(exists=True), help="Project config YAML")
+@click.option(
+    "--config", "config_path",
+    type=click.Path(exists=True),
+    help="Project config YAML",
+)
 @click.option(
     "--layers",
     type=str,
@@ -88,8 +103,8 @@ def evaluate(
     fail_on: str | None,
 ) -> None:
     """Evaluate migration attempts against a before-migration baseline."""
-    from migeval.orchestrator import run_evaluation
-    from migeval.reporting.markdown_report import generate_markdown_report
+
+    # Input validation
 
     if not attempt:
         click.echo("Error: at least one --attempt is required", err=True)
@@ -185,7 +200,6 @@ def bootstrap(
     max_budget: float,
 ) -> None:
     """Bootstrap a complete migration evaluation target using LLM + web research."""
-    from migeval.bootstrap import run_bootstrap
 
     before_path: Path | None = None
     if before:
@@ -218,17 +232,10 @@ def bootstrap(
 @main.command()
 def check() -> None:
     """Check that the Claude Agent SDK can connect to an LLM backend."""
-    import asyncio
 
     click.echo("Checking Claude Agent SDK connectivity...")
 
     async def _check() -> None:
-        from claude_agent_sdk import (
-            AssistantMessage,
-            ClaudeAgentOptions,
-            ResultMessage,
-            query,
-        )
 
         got_response = False
         async for message in query(
@@ -254,7 +261,7 @@ def check() -> None:
         asyncio.run(_check())
         click.echo("LLM connectivity: OK")
     except Exception as e:
-        click.echo(f"LLM connectivity: FAILED", err=True)
+        click.echo("LLM connectivity: FAILED", err=True)
         click.echo(f"  Error: {e}", err=True)
         sys.exit(1)
 
@@ -264,9 +271,6 @@ def check() -> None:
 @click.argument("run_b", type=click.Path(exists=True))
 def compare(run_a: str, run_b: str) -> None:
     """Compare two evaluation runs for regression tracking."""
-    from migeval.models import EvaluationRun
-    from migeval.regression import compute_regressions
-
     with open(run_a) as f:
         data_a = json.load(f)
     with open(run_b) as f:

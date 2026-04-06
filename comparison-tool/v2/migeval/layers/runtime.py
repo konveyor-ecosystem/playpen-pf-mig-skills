@@ -11,8 +11,12 @@ import asyncio
 import json
 import subprocess
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any
+
+from claude_agent_sdk import ClaudeAgentOptions
 
 from migeval.config import load_target_module, merge_configs
 from migeval.models import (
@@ -24,6 +28,7 @@ from migeval.models import (
     TargetConfig,
     make_issue_id,
 )
+from migeval.util.agent import run_agent_query
 
 
 class RuntimeLayer:
@@ -201,10 +206,6 @@ After checking all routes, output ONLY a JSON object (no markdown fencing) with 
 
 async def _run_playwright_agent(prompt: str, screenshot_dir: Path) -> str:
     """Run the Agent SDK with Playwright MCP server attached."""
-    from claude_agent_sdk import ClaudeAgentOptions
-
-    from migeval.util.agent import run_agent_query
-
     return await run_agent_query(
         prompt=prompt,
         options=ClaudeAgentOptions(
@@ -225,9 +226,6 @@ async def _run_playwright_agent(prompt: str, screenshot_dir: Path) -> str:
 
 def _wait_for_server(port: int, timeout: int = 120) -> None:
     """Wait for a server to respond on the given port."""
-    import urllib.error
-    import urllib.request
-
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:

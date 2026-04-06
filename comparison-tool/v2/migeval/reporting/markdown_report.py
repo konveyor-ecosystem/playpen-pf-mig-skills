@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 from migeval.models import (
-    AttemptDelta,
     AttemptResult,
     EvaluationRun,
     Issue,
     LayerName,
     Severity,
 )
-
 
 _SEVERITY_ORDER: list[Severity] = [
     "critical", "high", "medium", "low", "warning", "info",
