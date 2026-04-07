@@ -551,6 +551,7 @@ source = { editable = "." }
 dependencies = [
     { name = "claude-agent-sdk" },
     { name = "click" },
+    { name = "openai" },
     { name = "pydantic" },
     { name = "pyyaml" },
 ]
@@ -570,7 +571,9 @@ playwright = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "mypy" },
     { name = "ruff" },
+    { name = "types-pyyaml" },
 ]
 
 [package.metadata]
@@ -578,6 +581,7 @@ requires-dist = [
     { name = "claude-agent-sdk", specifier = ">=0.1.54" },
     { name = "click", specifier = ">=8.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.8" },
+    { name = "openai", specifier = ">=2.30.0" },
     { name = "openai", marker = "extra == 'llm'", specifier = ">=1.0" },
     { name = "playwright", marker = "extra == 'playwright'", specifier = ">=1.40" },
     { name = "pydantic", specifier = ">=2.0" },
@@ -588,7 +592,11 @@ requires-dist = [
 provides-extras = ["llm", "playwright", "dev"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "ruff", specifier = ">=0.15.9" }]
+dev = [
+    { name = "mypy", specifier = ">=1.20.0" },
+    { name = "ruff", specifier = ">=0.15.9" },
+    { name = "types-pyyaml", specifier = ">=6.0.12.20250915" },
+]
 
 [[package]]
 name = "mypy"

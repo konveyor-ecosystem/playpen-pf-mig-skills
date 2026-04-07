@@ -12,6 +12,7 @@ dependencies = [
     "click>=8.0",
     "pyyaml>=6.0",
     "claude-agent-sdk>=0.1.54",
+    "openai>=2.30.0",
 ]
 
 [project.optional-dependencies]
@@ -57,5 +58,7 @@ known-first-party = ["migeval"]
 
 [dependency-groups]
 dev = [
+    "mypy>=1.20.0",
     "ruff>=0.15.9",
+    "types-pyyaml>=6.0.12.20250915",
 ]
