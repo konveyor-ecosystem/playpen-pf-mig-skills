@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import json
-import sys
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import click
 import yaml
 
 from migeval.comparison import compare_attempts
@@ -35,7 +35,7 @@ from migeval.reporting.markdown_report import generate_markdown_report
 
 def _log(msg: str) -> None:
     """Log a message to stderr."""
-    print(msg, file=sys.stderr, flush=True)
+    click.echo(msg, err=True)
 
 
 def _warn_missing_config(

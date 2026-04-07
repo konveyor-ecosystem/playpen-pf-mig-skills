@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import sys
 from typing import Any
 
+import click
 from claude_agent_sdk import (
     AssistantMessage,
     ClaudeAgentOptions,
@@ -20,7 +20,7 @@ from claude_agent_sdk import (
 
 def log_agent(prefix: str, msg: str) -> None:
     """Log an agent progress message to stderr."""
-    print(f"[{prefix:12s}] {msg}", file=sys.stderr, flush=True)
+    click.echo(f"[{prefix:12s}] {msg}", err=True)
 
 
 async def run_agent_query(

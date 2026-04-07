@@ -211,14 +211,14 @@ def bootstrap(
     out = Path(output_dir).resolve()
     out.mkdir(parents=True, exist_ok=True)
 
-    click.echo(f"Bootstrapping target for: {description}")
+    click.echo(f"Bootstrapping target for: {description}", err=True)
     if before_path:
-        click.echo(f"Before codebase: {before_path}")
+        click.echo(f"Before codebase: {before_path}", err=True)
     else:
-        click.echo("No before codebase — using web research only")
-    click.echo(f"Output: {out}")
-    click.echo(f"Budget: ${max_budget:.2f}, max turns: {max_turns}")
-    click.echo("")
+        click.echo("No before codebase — using web research only", err=True)
+    click.echo(f"Output: {out}", err=True)
+    click.echo(f"Budget: ${max_budget:.2f}, max turns: {max_turns}", err=True)
+    click.echo("", err=True)
 
     run_bootstrap(
         before_path=before_path,
@@ -233,7 +233,7 @@ def bootstrap(
 def check() -> None:
     """Check that the Claude Agent SDK can connect to an LLM backend."""
 
-    click.echo("Checking Claude Agent SDK connectivity...")
+    click.echo("Checking Claude Agent SDK connectivity...", err=True)
 
     async def _check() -> None:
 
@@ -246,12 +246,12 @@ def check() -> None:
             ),
         ):
             if isinstance(message, ResultMessage):
-                click.echo(f"Result: {message.result}")
+                click.echo(f"Result: {message.result}", err=True)
                 got_response = True
             elif isinstance(message, AssistantMessage):
                 for block in message.content:
                     if hasattr(block, "text"):
-                        click.echo(f"Response: {block.text}")
+                        click.echo(f"Response: {block.text}", err=True)
                         got_response = True
 
         if not got_response:
@@ -259,7 +259,7 @@ def check() -> None:
 
     try:
         asyncio.run(_check())
-        click.echo("LLM connectivity: OK")
+        click.echo("LLM connectivity: OK", err=True)
     except Exception as e:
         click.echo("LLM connectivity: FAILED", err=True)
         click.echo(f"  Error: {e}", err=True)
